@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import Logo from '../components/Logo.astro';
 import { REPO_URL } from '../lib/labels';
 
 interface Props {
@@ -50,15 +51,19 @@ const path = Astro.url.pathname.replace(/\/$/, '') || '/';
       const theme = localStorage.getItem('theme') ||
         (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
       document.documentElement.classList.toggle('dark', theme === 'dark');
+
+      // The logo compresses "The AI Encyclopedia" on every page load
+      if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        document.documentElement.classList.add('logo-intro');
+      }
     </script>
   </head>
   <body class="min-h-screen flex flex-col">
     <header class="sticky top-0 z-50 bg-bg/80 backdrop-blur-md border-b border-border">
       <nav class="max-w-7xl mx-auto px-5 h-12 flex items-center justify-between">
-        <a href="/" class="group flex items-baseline gap-0.5 tracking-tight" aria-label="AIpedia home">
-          <span class="font-bold text-base">AI</span><span class="font-normal text-base text-text-secondary group-hover:text-text transition-colors">pedia</span>
-        </a>
-        <div class="flex items-center gap-5">
+        <Logo />
+        {/* On phones the logo intro needs the whole bar, so the links fade in after it */}
+        <div class="flex items-center gap-5 transition-opacity duration-500 delay-300 max-sm:[.logo-intro_&]:opacity-0">
           <a
             href="/tags"
             class:list={[

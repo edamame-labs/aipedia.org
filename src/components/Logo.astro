@@ -1,25 +1,165 @@
 ---
-interface Props {
-  size?: 'sm' | 'md' | 'lg' | 'xl';
-}
-
-const { size = 'md' } = Astro.props;
-
-const sizeConfig = {
-  sm: 'text-lg',
-  md: 'text-xl',
-  lg: 'text-3xl',
-  xl: 'text-4xl md:text-5xl',
-};
+// "The AI Encyclopedia", compressed: the letters around "AI" and "pedia" collapse
+// and ".org" types in. It plays on every page load (the head script in Base.astro
+// adds .logo-intro); hover or keyboard focus runs it in reverse.
+const spell = (text: string) =>
+  [...text].map((char, i) => ({ char, style: `--i:${i};--n:${text.length}` }));
 ---
 
-<span class={`logo font-semibold tracking-tight ${sizeConfig[size]}`}>
-  <span class="font-bold">AI</span><span class="font-normal text-text-secondary">pedia</span>
-</span>
+<a href="/" class="logo" aria-label="AIpedia home" data-logo>
+  {spell('The ').map(({ char, style }) => <span class="ch drop" style={style}>{char}</span>)}
+  <span class="ai">AI</span>
+  {spell(' Encyclo').map(({ char, style }) => <span class="ch drop" style={style}>{char}</span>)}
+  <span class="pedia">pedia</span>
+  {spell('.org').map(({ char, style }) => <span class="ch tld" style={style}>{char}</span>)}
+</a>
 
 <style>
   .logo {
-    font-family: 'Inter', system-ui, sans-serif;
-    letter-spacing: -0.02em;
+    --dur: 0.28s;
+    --gap: 0.02s;
+    display: flex;
+    font-size: 1rem;
+    line-height: 1.5rem;
+    letter-spacing: -0.025em;
+    white-space: pre;
+  }
+
+  .slow {
+    --dur: 0.5s;
+    --gap: 0.045s;
+  }
+
+  .ch {
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .ready .ch {
+    transition-property: width, opacity, filter;
+    transition-duration: var(--dur);
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .ai {
+    font-weight: 700;
+  }
+
+  .drop,
+  .pedia,
+  .tld {
+    color: rgb(var(--color-text-secondary));
+  }
+
+  .pedia {
+    margin-left: 0.125rem;
+  }
+
+  .ready .pedia {
+    transition: color var(--dur), margin-left var(--dur);
+  }
+
+  /* At rest, "AIpedia.org": the extra letters delete right to left, then .org types in */
+
+  .drop {
+    width: 0;
+    opacity: 0;
+    filter: blur(2px);
+    transition-delay: calc((var(--n) - 1 - var(--i)) * var(--gap));
+  }
+
+  .tld {
+    width: var(--w, auto);
+    transition-delay: calc(var(--dur) * 0.6 + var(--i) * var(--gap));
+  }
+
+  /* Open, "The AI Encyclopedia": the letters type back in and .org deletes */
+
+  .open .drop,
+  :global(.logo-intro) .drop {
+    width: var(--w, auto);
+    opacity: 1;
+    filter: blur(0);
+    transition-delay: calc(var(--i) * var(--gap));
+  }
+
+  .open .tld,
+  :global(.logo-intro) .tld {
+    width: 0;
+    opacity: 0;
+    filter: blur(2px);
+    transition-delay: calc((var(--n) - 1 - var(--i)) * var(--gap) / 2);
+  }
+
+  .open .pedia,
+  :global(.logo-intro) .pedia {
+    margin-left: 0;
+    color: rgb(var(--color-text));
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ready .ch,
+    .ready .pedia {
+      transition: none;
+    }
   }
 </style>
+
+<script>
+  const root = document.documentElement;
+  const logos = [...document.querySelectorAll<HTMLElement>('[data-logo]')];
+
+  // Each letter animates to and from its own width, measured in the loaded webfont
+  function measure() {
+    const range = document.createRange();
+    for (const letter of document.querySelectorAll<HTMLElement>('[data-logo] .ch')) {
+      range.selectNodeContents(letter);
+      letter.style.setProperty('--w', `${range.getBoundingClientRect().width}px`);
+    }
+  }
+
+  for (const logo of logos) {
+    let hover = false;
+    let focus = false;
+    const sync = () => logo.classList.toggle('open', hover || focus);
+    logo.addEventListener('pointerenter', (e) => {
+      hover = e.pointerType === 'mouse';
+      sync();
+    });
+    logo.addEventListener('pointerleave', () => {
+      hover = false;
+      sync();
+    });
+    logo.addEventListener('focus', () => {
+      focus = logo.matches(':focus-visible');
+      sync();
+    });
+    logo.addEventListener('blur', () => {
+      focus = false;
+      sync();
+    });
+  }
+
+  const fonts = Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1000))]);
+  const visible = new Promise((r) => {
+    if (document.hidden) document.addEventListener('visibilitychange', r, { once: true });
+    else r(undefined);
+  });
+
+  fonts.then(() => {
+    measure();
+    document.fonts.addEventListener('loadingdone', measure);
+    logos.forEach((logo) => logo.classList.add('ready'));
+  });
+
+  // Hold the full name for a beat, then compress it
+  if (root.classList.contains('logo-intro')) {
+    Promise.all([fonts, visible]).then(() =>
+      setTimeout(() => {
+        logos.forEach((logo) => logo.classList.add('slow'));
+        root.classList.remove('logo-intro');
+        setTimeout(() => logos.forEach((logo) => logo.classList.remove('slow')), 1500);
+      }, 700)
+    );
+  }
+</script>
