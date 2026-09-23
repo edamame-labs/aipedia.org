@@ -1,8 +1,20 @@
 ---
 title: "Understanding LSTM Networks"
 description: "Christopher Olah's visual guide to Long Short-Term Memory networks"
+category: "blog"
+by: "Chris Olah"
+year: 2015
 date: 2026-01-13
 tags: ["deep-learning", "rnn", "lstm", "nlp"]
+resources:
+  - kind: article
+    title: "Understanding LSTM Networks"
+    url: "https://colah.github.io/posts/2015-08-Understanding-LSTMs/"
+    note: "Chris Olah, 2015"
+  - kind: paper
+    title: "Long Short-Term Memory"
+    url: "https://doi.org/10.1162/neco.1997.9.8.1735"
+    note: "Hochreiter & Schmidhuber, 1997"
 ---
 
 import { LSTMCellViz } from '../../components/viz/LSTMCellViz';
@@ -95,7 +107,3 @@ The belt keeps moving; workers only modify what's necessary.
 - **GRU (Gated Recurrent Unit)**: Combines forget and input gates, simpler
 - **Peephole Connections**: Gates can look at cell state directly
 - **Bidirectional LSTM**: Process sequence in both directions
-
-## Key Resource
-
-- **Blog Post**: https://colah.github.io/posts/2015-08-Understanding-LSTMs/

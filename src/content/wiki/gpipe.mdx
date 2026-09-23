@@ -1,8 +1,16 @@
 ---
 title: "GPipe: Easy Scaling with Micro-Batch Pipeline Parallelism"
 description: "Training giant neural networks by pipelining micro-batches across devices"
+category: "paper"
+by: "Huang et al."
+year: 2019
 date: 2026-01-13
 tags: ["deep-learning", "distributed", "training", "parallelism"]
+resources:
+  - kind: paper
+    title: "GPipe: Efficient Training of Giant Neural Networks using Pipeline Parallelism"
+    url: "https://arxiv.org/abs/1811.06965"
+    note: "Huang et al., NeurIPS 2019"
 ---
 
 import { GPipeViz } from '../../components/viz/GPipeViz';
@@ -88,8 +96,3 @@ GPipe achieved 84.4% ImageNet accuracy with a 557M parameter AmoebaNet.
 | Batch size | Scales with K | Independent of K |
 
 GPipe is complementary—can combine both approaches.
-
-## Key Paper
-
-- **GPipe: Easy Scaling with Micro-Batch Pipeline Parallelism** — Huang et al. (2019)  
-  https://arxiv.org/abs/1811.06965

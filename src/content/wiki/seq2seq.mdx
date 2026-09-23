@@ -1,8 +1,28 @@
 ---
 title: "Sequence to Sequence Learning"
 description: "Encoder-decoder architecture for mapping sequences to sequences"
+category: "paper"
+by: "Sutskever, Vinyals & Le"
+year: 2014
 date: 2026-02-01
 tags: ["architecture", "deep-learning", "nlp", "encoder-decoder", "seq2seq", "rnn"]
+resources:
+  - kind: paper
+    title: "Sequence to Sequence Learning with Neural Networks"
+    url: "https://arxiv.org/abs/1409.3215"
+    note: "Sutskever, Vinyals & Le, 2014"
+  - kind: paper
+    title: "Learning Phrase Representations using RNN Encoder-Decoder"
+    url: "https://arxiv.org/abs/1406.1078"
+    note: "Cho et al., 2014"
+  - kind: paper
+    title: "Neural Machine Translation by Jointly Learning to Align and Translate"
+    url: "https://arxiv.org/abs/1409.0473"
+    note: "Bahdanau, Cho & Bengio, 2014"
+  - kind: paper
+    title: "Effective Approaches to Attention-based Neural Machine Translation"
+    url: "https://arxiv.org/abs/1508.04025"
+    note: "Luong et al., 2015"
 ---
 
 import { Seq2SeqViz } from '../../components/viz/Seq2SeqViz';
@@ -172,14 +192,3 @@ class Seq2Seq(nn.Module):
 
         return torch.stack(outputs)
 ```
-
-## Key Papers
-
-- **Sequence to Sequence Learning with Neural Networks** – Sutskever et al., 2014  \
-  https://arxiv.org/abs/1409.3215
-- **Learning Phrase Representations using RNN Encoder-Decoder** – Cho et al., 2014  \
-  https://arxiv.org/abs/1406.1078
-- **Neural Machine Translation by Jointly Learning to Align and Translate** – Bahdanau et al., 2014  \
-  https://arxiv.org/abs/1409.0473
-- **Effective Approaches to Attention-based Neural Machine Translation** – Luong et al., 2015  \
-  https://arxiv.org/abs/1508.04025

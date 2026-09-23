@@ -1,8 +1,28 @@
 ---
 title: "Attention Is All You Need"
 description: "The 2017 paper that introduced the Transformer architecture"
+category: "paper"
+by: "Vaswani et al."
+year: 2017
 date: 2026-02-26
-tags: ["paper", "architecture", "attention", "deep-learning", "nlp", "transformer"]
+tags: ["architecture", "attention", "deep-learning", "nlp", "transformer"]
+resources:
+  - kind: paper
+    title: "Attention Is All You Need"
+    url: "https://arxiv.org/abs/1706.03762"
+    note: "Vaswani et al., 2017"
+  - kind: code
+    title: "tensorflow/tensor2tensor"
+    url: "https://github.com/tensorflow/tensor2tensor"
+    note: "Original implementation"
+  - kind: article
+    title: "The Annotated Transformer"
+    url: "https://nlp.seas.harvard.edu/annotated-transformer/"
+    note: "Rush, 2018"
+  - kind: paper
+    title: "Neural Machine Translation by Jointly Learning to Align and Translate"
+    url: "https://arxiv.org/abs/1409.0473"
+    note: "Bahdanau, Cho & Bengio, 2014"
 ---
 
 import { AttentionPaperViz } from '../../components/viz/AttentionPaperViz';
@@ -125,12 +145,3 @@ This paper directly led to:
 - The paper introduced the Transformer
 - The key mechanism was self-attention
 - The breakthrough was both conceptual and practical: better long-range modeling and much better parallelism
-
-## Key Papers
-
-- **Attention Is All You Need** - Vaswani et al., 2017  \
-  https://arxiv.org/abs/1706.03762
-- **Neural Machine Translation by Jointly Learning to Align and Translate** - Bahdanau et al., 2014  \
-  https://arxiv.org/abs/1409.0473
-- **The Annotated Transformer** - Rush, 2018  \
-  https://nlp.seas.harvard.edu/annotated-transformer/

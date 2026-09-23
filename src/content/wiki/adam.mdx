@@ -1,8 +1,28 @@
 ---
 title: "Adam Optimizer"
 description: "Adaptive learning rates with momentum for deep learning"
+category: "concept"
+by: "Kingma & Ba"
+year: 2014
 date: 2026-02-01
 tags: ["deep-learning", "training", "optimization"]
+resources:
+  - kind: paper
+    title: "Adam: A Method for Stochastic Optimization"
+    url: "https://arxiv.org/abs/1412.6980"
+    note: "Kingma & Ba, 2014"
+  - kind: paper
+    title: "Decoupled Weight Decay Regularization (AdamW)"
+    url: "https://arxiv.org/abs/1711.05101"
+    note: "Loshchilov & Hutter, 2017"
+  - kind: paper
+    title: "On the Variance of the Adaptive Learning Rate and Beyond (RAdam)"
+    url: "https://arxiv.org/abs/1908.03265"
+    note: "Liu et al., 2019"
+  - kind: paper
+    title: "Symbolic Discovery of Optimization Algorithms (Lion)"
+    url: "https://arxiv.org/abs/2302.06675"
+    note: "Chen et al., 2023"
 ---
 
 import { AdamViz } from '../../components/viz/AdamViz';
@@ -139,14 +159,3 @@ Adam's impact:
 - Enabled training without extensive hyperparameter search
 - Made research more accessible (less tuning expertise needed)
 - Foundation for modern optimizer development
-
-## Key Papers
-
-- **Adam: A Method for Stochastic Optimization** – Kingma & Ba, 2014  \
-  https://arxiv.org/abs/1412.6980
-- **Decoupled Weight Decay Regularization** (AdamW) – Loshchilov & Hutter, 2017  \
-  https://arxiv.org/abs/1711.05101
-- **On the Variance of the Adaptive Learning Rate and Beyond** (RAdam) – Liu et al., 2019  \
-  https://arxiv.org/abs/1908.03265
-- **Symbolic Discovery of Optimization Algorithms** (Lion) – Chen et al., 2023  \
-  https://arxiv.org/abs/2302.06675

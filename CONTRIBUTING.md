@@ -22,7 +22,7 @@ This project follows a standard Code of Conduct. By participating, you agree to 
 - **Tutorials**: Create learning paths for beginners
 
 ### 🐛 Report Issues
-- Found an error? [Open an issue](https://github.com/YOUR_USERNAME/aipedia.org/issues)
+- Found an error? [Open an issue](https://github.com/edamame-labs/aipedia.org/issues)
 - Suggest improvements or new topics
 
 ### 💻 Improve Code
@@ -69,20 +69,32 @@ git checkout -b fix/bug-description
 ## Content Guidelines
 
 ### File Naming
-- Use `kebab-case` for all files
-- Papers: `YYYY-paper-name.mdx` (e.g., `2017-attention-is-all-you-need.mdx`)
-- Concepts: `concept-name.mdx` (e.g., `transformer-architecture.mdx`)
+- Use `kebab-case` for all files (e.g., `attention-is-all-you-need.mdx`)
 
 ### Frontmatter
-Every content file needs frontmatter:
+Every entry needs frontmatter (the schema lives in `src/content/config.ts`):
 
 ```yaml
 ---
 title: "Your Title"
-description: "Brief description for SEO"
-tags: [relevant, tags]
+description: "One line shown on the card and in search results"
+category: "paper"        # paper | concept | software | interview | position | demo | blog | product | misc
+by: "Vaswani et al."     # optional: who made it
+year: 2017               # optional: when the original work came out
+date: 2026-02-26         # when the entry was added
+tags: ["attention", "nlp"]
+resources:               # the first one is the primary source
+  - kind: paper          # paper | code | article | video | course | book | docs
+    title: "Attention Is All You Need"
+    url: "https://arxiv.org/abs/1706.03762"
+    note: "Vaswani et al., 2017"
 ---
 ```
+
+Links to papers, code, and videos belong in `resources` rather than in the body: they are shown on the entry's card and in its infobox.
+
+### Card Previews
+With the dev server running, `bun run thumbs your-entry` captures the entry's visualization in light and dark into `public/thumbs/` (it uses your installed Google Chrome).
 
 ### Content Structure
 
@@ -92,7 +104,7 @@ tags: [relevant, tags]
 3. **Interactive Demo** - Let readers explore
 4. **Technical Details** - How it works
 5. **Code Example** - Implementation
-6. **Further Reading** - Links
+6. **Resources** - Papers, code, and videos in the frontmatter
 
 #### For Papers
 1. **TL;DR** - One paragraph summary
@@ -115,7 +127,7 @@ tags: [relevant, tags]
 
 ### Before Submitting
 1. [ ] Test your changes locally (`bun start`)
-2. [ ] Run type checking (`bun run typecheck`)
+2. [ ] Capture the card preview (`bun run thumbs your-entry`)
 3. [ ] Build successfully (`bun run build`)
 4. [ ] Preview in both light and dark mode
 
@@ -153,7 +165,7 @@ Examples:
 - TypeScript for all components
 - Use functional components with hooks
 - Include JSDoc comments for public APIs
-- Use CSS Modules for styling
+- Style with Tailwind classes and the theme tokens in `src/styles/global.css`
 
 ### Commit Messages
 ```
@@ -168,7 +180,7 @@ Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
 
 ## Questions?
 
-- Open a [Discussion](https://github.com/YOUR_USERNAME/aipedia.org/discussions)
+- Open a [Discussion](https://github.com/edamame-labs/aipedia.org/discussions)
 - Check existing issues and discussions first
 
 ---

@@ -1,24 +1,21 @@
 ---
-import { getCollection } from 'astro:content';
 import WikiPage from '../layouts/WikiPage.astro';
+import { getEntries, getItems, relatedItems, toItem, type Entry } from '../lib/catalog';
 
 export async function getStaticPaths() {
-  const pages = await getCollection('wiki');
-  return pages.map(page => ({
-    params: { slug: page.slug },
-    props: { page },
+  const entries = await getEntries();
+  return entries.map((entry) => ({
+    params: { slug: entry.slug },
+    props: { entry },
   }));
 }
 
-const { page } = Astro.props;
-const { Content } = await page.render();
+const { entry } = Astro.props as { entry: Entry };
+const { Content, headings } = await entry.render();
+const item = toItem(entry);
+const related = relatedItems(item, await getItems());
 ---
 
-<WikiPage
-  title={page.data.title}
-  description={page.data.description}
-  tags={page.data.tags}
-  slug={page.slug}
->
+<WikiPage item={item} headings={headings} related={related}>
   <Content />
 </WikiPage>

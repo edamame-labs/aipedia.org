@@ -1,8 +1,16 @@
 ---
 title: "Recurrent Neural Network Regularization"
 description: "How to apply dropout to LSTMs without disrupting memory dynamics"
+category: "paper"
+by: "Zaremba, Sutskever & Vinyals"
+year: 2014
 date: 2026-01-13
 tags: ["deep-learning", "rnn", "lstm", "regularization"]
+resources:
+  - kind: paper
+    title: "Recurrent Neural Network Regularization"
+    url: "https://arxiv.org/abs/1409.2329"
+    note: "Zaremba, Sutskever & Vinyals, 2014"
 ---
 
 import { DropoutViz } from '../../components/viz/DropoutViz';
@@ -92,8 +100,3 @@ The scaling factor ensures expected values match at test time.
 ## Legacy
 
 This paper established best practices for RNN regularization that remained standard until Transformers. The insight that different connection types need different treatment influenced later work on attention dropout and layer normalization.
-
-## Key Paper
-
-- **Recurrent Neural Network Regularization** — Zaremba, Sutskever, Vinyals (2014)  
-  https://arxiv.org/abs/1409.2329

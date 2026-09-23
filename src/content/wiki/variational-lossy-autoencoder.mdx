@@ -1,8 +1,16 @@
 ---
 title: "Variational Lossy Autoencoder"
 description: "Understanding VAEs as compression systems with a rate-distortion trade-off"
+category: "paper"
+by: "Chen et al."
+year: 2016
 date: 2026-01-13
 tags: ["deep-learning", "vae", "compression", "generative"]
+resources:
+  - kind: paper
+    title: "Variational Lossy Autoencoder"
+    url: "https://arxiv.org/abs/1611.02731"
+    note: "Chen et al., 2016"
 ---
 
 import { VLAEViz } from '../../components/viz/VLAEViz';
@@ -91,8 +99,3 @@ In that case, the latent carries very little information. This is called **poste
 - VLAE interprets VAEs as lossy compression systems
 - The KL term is about information budget, not just regularization
 - Posterior collapse means the model has stopped using the latent effectively
-
-## Key Paper
-
-- **Variational Lossy Autoencoder** - Chen et al. (2016)  
-  https://arxiv.org/abs/1611.02731

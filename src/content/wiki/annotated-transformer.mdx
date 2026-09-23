@@ -1,8 +1,24 @@
 ---
 title: "The Annotated Transformer"
 description: "Line-by-line PyTorch implementation of the Transformer architecture"
+category: "blog"
+by: "Sasha Rush"
+year: 2018
 date: 2026-01-13
 tags: ["deep-learning", "transformer", "attention", "nlp"]
+resources:
+  - kind: article
+    title: "The Annotated Transformer"
+    url: "https://nlp.seas.harvard.edu/annotated-transformer/"
+    note: "Harvard NLP, 2018"
+  - kind: code
+    title: "harvardnlp/annotated-transformer"
+    url: "https://github.com/harvardnlp/annotated-transformer"
+    note: "Notebook source"
+  - kind: paper
+    title: "Attention Is All You Need"
+    url: "https://arxiv.org/abs/1706.03762"
+    note: "Vaswani et al., 2017"
 ---
 
 import { AnnotatedTransformerViz } from '../../components/viz/AnnotatedTransformerViz';
@@ -73,9 +89,3 @@ The Annotated Transformer is best approached in order:
 3. **Multi-Head** — Parallel attention
 4. **Encoder/Decoder** — Full architecture
 5. **Training** — Label smoothing, optimizer
-
-## Resources
-
-- **Full Article**: https://nlp.seas.harvard.edu/annotated-transformer/
-- **GitHub**: https://github.com/harvardnlp/annotated-transformer
-- **Original Paper**: "Attention Is All You Need" (Vaswani et al., 2017)

@@ -1,8 +1,24 @@
 ---
 title: "Variational Autoencoder (VAE)"
 description: "Probabilistic generative model with structured latent space"
+category: "concept"
+by: "Kingma & Welling"
+year: 2013
 date: 2026-01-13
 tags: ["deep-learning", "generative", "autoencoder", "latent-space"]
+resources:
+  - kind: paper
+    title: "Auto-Encoding Variational Bayes"
+    url: "https://arxiv.org/abs/1312.6114"
+    note: "Kingma & Welling, 2013"
+  - kind: paper
+    title: "Early Visual Concept Learning with Unsupervised Deep Learning"
+    url: "https://arxiv.org/abs/1606.05579"
+    note: "Higgins et al., 2016 (precursor to β-VAE)"
+  - kind: paper
+    title: "Neural Discrete Representation Learning (VQ-VAE)"
+    url: "https://arxiv.org/abs/1711.00937"
+    note: "van den Oord et al., 2017"
 ---
 
 import { VAEViz } from '../../components/viz/VAEViz';
@@ -63,11 +79,5 @@ Explore how VAEs encode distributions, sample latents, interpolate, and decode:
 - **VQ-VAE** – discrete latent codes via vector quantization
 - **Conditional VAE** – generation conditioned on labels
 - **Hierarchical VAE** – multi-level latent variables
-
-## Key Papers
-
-- [Auto-Encoding Variational Bayes](https://arxiv.org/abs/1312.6114) – Kingma & Welling (2013)
-- [β-VAE: Learning Basic Visual Concepts](https://arxiv.org/abs/1606.05579) – Higgins et al. (2017)
-- [Neural Discrete Representation Learning](https://arxiv.org/abs/1711.00937) – van den Oord et al. (2017)
 
 VAEs form the foundation of many modern generative models, including diffusion model latents and learned priors.

@@ -1,8 +1,28 @@
 ---
 title: "Batch Normalization"
 description: "Normalizing layer inputs to accelerate deep network training"
+category: "concept"
+by: "Ioffe & Szegedy"
+year: 2015
 date: 2026-02-01
 tags: ["deep-learning", "training", "optimization", "architecture"]
+resources:
+  - kind: paper
+    title: "Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift"
+    url: "https://arxiv.org/abs/1502.03167"
+    note: "Ioffe & Szegedy, 2015"
+  - kind: paper
+    title: "Layer Normalization"
+    url: "https://arxiv.org/abs/1607.06450"
+    note: "Ba, Kiros & Hinton, 2016"
+  - kind: paper
+    title: "Group Normalization"
+    url: "https://arxiv.org/abs/1803.08494"
+    note: "Wu & He, 2018"
+  - kind: paper
+    title: "How Does Batch Normalization Help Optimization?"
+    url: "https://arxiv.org/abs/1805.11604"
+    note: "Santurkar et al., 2018"
 ---
 
 import { BatchNormViz } from '../../components/viz/BatchNormViz';
@@ -133,14 +153,3 @@ BatchNorm enabled:
 - Higher learning rates (faster experimentation)
 - Reduced hyperparameter sensitivity
 - Standard component in nearly all modern architectures
-
-## Key Papers
-
-- **Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift** – Ioffe & Szegedy, 2015  \
-  https://arxiv.org/abs/1502.03167
-- **Layer Normalization** – Ba et al., 2016  \
-  https://arxiv.org/abs/1607.06450
-- **Group Normalization** – Wu & He, 2018  \
-  https://arxiv.org/abs/1803.08494
-- **How Does Batch Normalization Help Optimization?** – Santurkar et al., 2018  \
-  https://arxiv.org/abs/1805.11604

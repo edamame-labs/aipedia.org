@@ -1,8 +1,24 @@
 ---
 title: "Maximum Likelihood Reinforcement Learning (MaxRL)"
 description: "A recent idea for training models on pass-fail tasks when sampling matters"
+category: "paper"
+by: "Tajwar et al."
+year: 2026
 date: 2026-02-13
 tags: ["deep-learning", "reinforcement-learning", "optimization", "policy-gradient"]
+resources:
+  - kind: paper
+    title: "Maximum Likelihood Reinforcement Learning"
+    url: "https://arxiv.org/abs/2602.02710"
+    note: "Tajwar et al., 2026"
+  - kind: paper
+    title: "Simple Statistical Gradient-Following Algorithms for Connectionist Reinforcement Learning"
+    url: "https://doi.org/10.1007/BF00992696"
+    note: "Williams, 1992 (REINFORCE)"
+  - kind: paper
+    title: "DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models"
+    url: "https://arxiv.org/abs/2402.03300"
+    note: "Shao et al., 2024 (introduces GRPO)"
 ---
 
 import { MaxLikelihoodRLViz } from '../../components/viz/MaxLikelihoodRLViz';
@@ -118,10 +134,3 @@ For students, the higher-level takeaway is stronger than the benchmark table: **
 - MaxRL is a bridge between RL training and maximum-likelihood training
 - It matters most on pass-fail tasks with low initial success rates
 - The key conceptual move is to care about more than the first-order RL term
-
-## Key Papers
-
-- **Maximum Likelihood Reinforcement Learning** - Tajwar, Zeng, Zhou, Song, Arora, Jiang, Schneider, Salakhutdinov, Feng, Zanette, 2026  
-  https://arxiv.org/abs/2602.02710
-- **Simple Statistical Gradient-Following Algorithms for Connectionist Reinforcement Learning (REINFORCE)** - Williams, 1992
-- **GRPO: Group Relative Policy Optimization** - Shao et al., 2024

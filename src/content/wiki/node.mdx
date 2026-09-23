@@ -1,8 +1,28 @@
 ---
 title: "NODE (Neural Oblivious Decision Ensembles)"
 description: "Differentiable decision trees and oblivious ensembles for tabular learning"
+category: "paper"
+by: "Popov et al."
+year: 2019
 date: 2026-01-10
 tags: ["deep-learning", "trees", "tabular-data", "differentiable"]
+resources:
+  - kind: paper
+    title: "Neural Oblivious Decision Ensembles for Deep Learning on Tabular Data"
+    url: "https://arxiv.org/abs/1909.06312"
+    note: "Popov et al., 2019"
+  - kind: code
+    title: "Qwicen/node"
+    url: "https://github.com/Qwicen/node"
+    note: "Official code"
+  - kind: paper
+    title: "Distilling a Neural Network Into a Soft Decision Tree"
+    url: "https://arxiv.org/abs/1711.09784"
+    note: "Frosst & Hinton, 2017"
+  - kind: paper
+    title: "Deep Neural Decision Forests"
+    url: "https://openaccess.thecvf.com/content_iccv_2015/html/Kontschieder_Deep_Neural_Decision_ICCV_2015_paper.html"
+    note: "Kontschieder et al., 2015"
 ---
 
 import { NodeTreeViz } from '../../components/viz/NodeTreeViz';
@@ -58,10 +78,3 @@ For $\alpha = 1.5$, entmax interpolates between softmax (dense) and argmax (hard
 - **TabNet**: Attention-based, less interpretable splits
 - **MLPs**: Weak inductive bias for tabular data
 - **NODE**: Tree bias + gradient learning
-
-## Key Papers
-
-- *Neural Oblivious Decision Ensembles for Deep Learning on Tabular Data* — Popov et al. (2019)  
-  https://arxiv.org/abs/1909.06312
-- *Soft Decision Trees* — Frosst & Hinton (2017)
-- *Deep Neural Decision Trees* — Kontschieder et al. (2015)

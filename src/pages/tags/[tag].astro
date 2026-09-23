@@ -1,47 +1,38 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { getCollection } from 'astro:content';
+import { EntryCard } from '../../components/EntryCard';
+import { getItems } from '../../lib/catalog';
+import { tagLabel, type Item } from '../../lib/labels';
 
 export async function getStaticPaths() {
-  const pages = await getCollection('wiki');
-  const allTags = [...new Set(pages.flatMap(p => p.data.tags))];
-  
-  return allTags.map(tag => ({
+  const items = await getItems();
+  const tags = [...new Set(items.flatMap((item) => item.tags))];
+  return tags.map((tag) => ({
     params: { tag },
-    props: {
-      tag,
-      pages: pages.filter(p => p.data.tags.includes(tag)),
-    },
+    props: { tag, items: items.filter((item) => item.tags.includes(tag)) },
   }));
 }
 
-const { tag, pages } = Astro.props;
+const { tag, items } = Astro.props as { tag: string; items: Item[] };
+const label = tagLabel(tag);
 ---
 
-<Base title={`Tag: ${tag}`}>
-  <div class="max-w-4xl mx-auto px-4 py-12">
-    <div class="mb-8">
-      <a href="/tags" class="text-text-secondary hover:text-accent text-sm mb-2 inline-block">
-        ← All tags
-      </a>
-      <h1 class="text-4xl font-bold">
-        <span class="text-text-secondary">#</span>{tag}
-      </h1>
-      <p class="text-text-secondary mt-2">{pages.length} page{pages.length === 1 ? '' : 's'}</p>
-    </div>
-    
-    <div class="grid gap-4">
-      {pages.map(page => (
-        <a
-          href={`/${page.slug}`}
-          class="group block p-6 rounded-xl border border-border hover:border-accent/50 hover:bg-bg-secondary transition-all"
-        >
-          <h3 class="text-xl font-semibold mb-2 group-hover:text-accent transition-colors">
-            {page.data.title}
-          </h3>
-          <p class="text-text-secondary">{page.data.description}</p>
-        </a>
-      ))}
+<Base title={label} description={`AIpedia entries about ${label}.`}>
+  <div class="max-w-7xl mx-auto px-5 pt-10">
+    <nav aria-label="Breadcrumb" class="text-[13px] text-text-secondary">
+      <a href="/" class="hover:text-text transition-colors">Index</a>
+      <span class="mx-1.5 text-border">/</span>
+      <a href="/tags" class="hover:text-text transition-colors">Topics</a>
+    </nav>
+    <h1 class="mt-5 text-3xl sm:text-4xl font-semibold tracking-tight">{label}</h1>
+    <p class="mt-3 text-text-secondary">
+      {items.length} {items.length === 1 ? 'entry' : 'entries'}
+      <span class="mx-1.5 text-border">/</span>
+      <a href={`/?topic=${tag}`} class="hover:text-text transition-colors">Filter in the index &rarr;</a>
+    </p>
+
+    <div class="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {items.map((item) => <EntryCard item={item} />)}
     </div>
   </div>
 </Base>

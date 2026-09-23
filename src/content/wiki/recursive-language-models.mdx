@@ -1,8 +1,24 @@
 ---
 title: "Recursive Language Models"
 description: "A paradigm where LLMs treat context as an environment and recursively call themselves on sub-problems"
+category: "paper"
+by: "Zhang, Kraska & Khattab"
+year: 2025
 date: 2026-02-01
 tags: ["language-models", "inference", "long-context", "agents"]
+resources:
+  - kind: paper
+    title: "Recursive Language Models"
+    url: "https://arxiv.org/abs/2512.24601"
+    note: "Zhang, Kraska & Khattab, 2025"
+  - kind: code
+    title: "alexzhang13/rlm"
+    url: "https://github.com/alexzhang13/rlm"
+    note: "Official implementation"
+  - kind: article
+    title: "Recursive Language Models: the paradigm of 2026"
+    url: "https://www.primeintellect.ai/blog/rlm"
+    note: "Prime Intellect"
 ---
 
 import { RLMViz } from '../../components/viz/RLMViz';
@@ -157,14 +173,3 @@ Each sub-call can spawn its own sub-calls until reaching a base case small enoug
 - **Asynchronous sub-calls**: Parallel recursive queries
 - **Native training**: Models trained end-to-end for recursive reasoning
 - **Long-horizon agents**: Tasks spanning weeks with persistent context management
-
-## Key Resources
-
-- **Paper**: Recursive Language Models (arXiv:2512.24601)
-  https://arxiv.org/abs/2512.24601
-
-- **Code**: Official implementation
-  https://github.com/alexzhang13/rlm
-
-- **Blog**: Prime Intellect's RLM overview
-  https://www.primeintellect.ai/blog/rlm

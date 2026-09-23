@@ -1,8 +1,28 @@
 ---
 title: "Dropout: Regularization for Neural Networks"
 description: "Randomly dropping units during training to prevent overfitting"
+category: "concept"
+by: "Hinton et al."
+year: 2012
 date: 2026-02-01
 tags: ["deep-learning", "training", "regularization", "optimization"]
+resources:
+  - kind: paper
+    title: "Improving neural networks by preventing co-adaptation of feature detectors"
+    url: "https://arxiv.org/abs/1207.0580"
+    note: "Hinton et al., 2012"
+  - kind: paper
+    title: "Dropout: A Simple Way to Prevent Neural Networks from Overfitting"
+    url: "https://jmlr.org/papers/v15/srivastava14a.html"
+    note: "Srivastava et al., 2014"
+  - kind: paper
+    title: "Dropout as a Bayesian Approximation"
+    url: "https://arxiv.org/abs/1506.02142"
+    note: "Gal & Ghahramani, 2016"
+  - kind: paper
+    title: "DropBlock: A regularization technique for convolutional networks"
+    url: "https://arxiv.org/abs/1810.12890"
+    note: "Ghiasi et al., 2018"
 ---
 
 import { DropoutViz } from '../../components/viz/DropoutViz';
@@ -132,14 +152,3 @@ Dropout was transformative:
 - Became standard in AlexNet (2012 ImageNet winner)
 - Reduced reliance on hand-designed regularization
 - Inspired numerous variants and theoretical analysis
-
-## Key Papers
-
-- **Improving neural networks by preventing co-adaptation of feature detectors** – Hinton et al., 2012  \
-  https://arxiv.org/abs/1207.0580
-- **Dropout: A Simple Way to Prevent Neural Networks from Overfitting** – Srivastava et al., 2014  \
-  https://jmlr.org/papers/v15/srivastava14a.html
-- **Dropout as a Bayesian Approximation** – Gal & Ghahramani, 2016  \
-  https://arxiv.org/abs/1506.02142
-- **DropBlock: A regularization technique for convolutional networks** – Ghiasi et al., 2018  \
-  https://arxiv.org/abs/1810.12890

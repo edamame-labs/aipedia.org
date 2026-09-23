@@ -7,6 +7,9 @@ import rehypeKatex from 'rehype-katex';
 
 export default defineConfig({
   site: 'https://aipedia.org',
+  redirects: {
+    '/browse': '/',
+  },
   integrations: [
     react(),
     tailwind({

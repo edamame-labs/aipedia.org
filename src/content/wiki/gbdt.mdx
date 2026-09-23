@@ -1,8 +1,32 @@
 ---
 title: "Gradient Boosted Decision Trees"
 description: "Sequential tree ensembles optimized via gradient descent"
+category: "misc"
+by: "Jerome Friedman"
+year: 2001
 date: 2026-01-10
 tags: ["machine-learning", "ensemble", "boosting", "trees"]
+resources:
+  - kind: paper
+    title: "Greedy Function Approximation: A Gradient Boosting Machine"
+    url: "https://doi.org/10.1214/aos/1013203451"
+    note: "Friedman, 2001"
+  - kind: paper
+    title: "XGBoost: A Scalable Tree Boosting System"
+    url: "https://arxiv.org/abs/1603.02754"
+    note: "Chen & Guestrin, 2016"
+  - kind: code
+    title: "dmlc/xgboost"
+    url: "https://github.com/dmlc/xgboost"
+    note: "XGBoost library"
+  - kind: paper
+    title: "LightGBM: A Highly Efficient Gradient Boosting Decision Tree"
+    url: "https://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree"
+    note: "Ke et al., 2017"
+  - kind: paper
+    title: "CatBoost: unbiased boosting with categorical features"
+    url: "https://arxiv.org/abs/1706.09516"
+    note: "Prokhorenkova et al., 2017"
 ---
 
 import { GBDTViz } from '../../components/viz/GBDTViz';
@@ -66,7 +90,7 @@ The demo below shows:
 ## Popular Implementations
 
 - **XGBoost** – https://arxiv.org/abs/1603.02754
-- **LightGBM** – https://arxiv.org/abs/1706.02677
+- **LightGBM** – https://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree
 - **CatBoost** – https://arxiv.org/abs/1706.09516
 
 Widely available in:

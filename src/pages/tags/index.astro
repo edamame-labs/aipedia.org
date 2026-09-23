@@ -1,31 +1,28 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { getCollection } from 'astro:content';
+import { getItems, topicCounts } from '../../lib/catalog';
+import { tagLabel } from '../../lib/labels';
 
-const pages = await getCollection('wiki');
-const tagCounts = pages.reduce((acc, page) => {
-  page.data.tags.forEach(tag => {
-    acc[tag] = (acc[tag] || 0) + 1;
-  });
-  return acc;
-}, {} as Record<string, number>);
-
-const sortedTags = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]);
+const items = await getItems();
+const topics = topicCounts(items, { includeBroad: true });
 ---
 
-<Base title="Tags">
-  <div class="max-w-4xl mx-auto px-4 py-12">
-    <h1 class="text-4xl font-bold mb-8">Tags</h1>
-    <div class="flex flex-wrap gap-3">
-      {sortedTags.map(([tag, count]) => (
+<Base title="Topics" description="Browse AIpedia entries by topic.">
+  <div class="max-w-7xl mx-auto px-5 pt-10">
+    <nav aria-label="Breadcrumb" class="text-[13px] text-text-secondary">
+      <a href="/" class="hover:text-text transition-colors">Index</a>
+    </nav>
+    <h1 class="mt-5 text-3xl sm:text-4xl font-semibold tracking-tight">Topics</h1>
+    <p class="mt-3 text-text-secondary">{topics.length} topics across {items.length} entries.</p>
+
+    <div class="mt-10 flex flex-wrap gap-1.5">
+      {topics.map(({ tag, count }) => (
         <a
           href={`/tags/${tag}`}
-          class="group flex items-center gap-2 px-4 py-2 rounded-lg border border-border hover:border-accent/50 hover:bg-bg-secondary transition-all"
+          class="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border text-text-secondary hover:text-text hover:border-text/20 transition-colors"
         >
-          <span class="group-hover:text-accent transition-colors">{tag}</span>
-          <span class="text-xs text-text-secondary bg-bg-secondary group-hover:bg-bg px-2 py-0.5 rounded-full">
-            {count}
-          </span>
+          <span class="text-[13px]">{tagLabel(tag)}</span>
+          <span class="font-mono text-[11px] tabular-nums opacity-60">{count}</span>
         </a>
       ))}
     </div>
