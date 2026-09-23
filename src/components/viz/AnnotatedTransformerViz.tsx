@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import '../../lib/motion';
 
 type Component = 'embedding' | 'encoder' | 'decoder' | 'attention' | 'ffn' | 'output';
 

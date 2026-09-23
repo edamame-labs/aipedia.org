@@ -23,17 +23,27 @@ resources:
 
 import { WorldOfBitsViz } from '../../components/viz/WorldOfBitsViz';
 
-**World of Bits (WoB)** is a platform introduced by Shi et al. (2017) where AI agents learn to complete tasks on the web by performing low-level keyboard and mouse actions—the same interface humans use.
+**World of Bits (WoB)** is a platform introduced by Shi et al. (2017) where AI agents learn to complete tasks on the web using the same interface humans use: looking at rendered pages and performing low-level keyboard and mouse actions.
+
+> This page assumes basic [Reinforcement Learning](/reinforcement-learning) vocabulary (agent, environment, reward). If those terms are new, start there.
+
+## Why Students Should Care
+
+- WoB is the direct ancestor of today's computer-use and browser agents — the idea of "an AI that clicks around the web" starts here.
+- It shows how to turn a messy real-world domain (the web) into a well-defined RL environment.
+- The benchmark gap it exposed (agents far below human performance on multi-step web tasks) drove years of follow-up work and is still not fully closed.
 
 ## Core Idea
 
 WoB treats the web as an open-domain reinforcement learning environment. At each timestep, an agent receives:
 
 - **Pixels** $\mathcal{I} \in \mathbb{R}^{W \times H \times 3}$ — rendered webpage screenshot
-- **DOM** $\mathcal{D}$ — Document Object Model with element coordinates
+- **DOM** $\mathcal{D}$ — Document Object Model (the page's element tree) with element coordinates
 - **Reward** $r$ — task completion signal
 
-The agent outputs mouse coordinates $(x, y)$ and keyboard actions to interact with the webpage.
+The agent outputs mouse coordinates $(x, y)$ and keyboard actions to interact with the webpage. Nothing about the interface is simplified for the agent — it sees what you see and acts how you act.
+
+The deeper point: by using the web as an environment, WoB bridges the gap between simulated benchmarks and real-world tasks. Agents learn from the same rich, semantic content that humans create and interact with daily.
 
 ## Why the Web?
 
@@ -45,46 +55,47 @@ Three key benefits make the web an ideal learning platform:
 | **Open-source** | HTML/CSS/JS is inspectable and modifiable |
 | **Data collection** | Human demonstrations can be crowdsourced easily |
 
-Unlike robotics, web environments are fully digital—enabling fast iteration and massive scaling.
+Unlike robotics, web environments are fully digital — enabling fast iteration and massive scaling.
 
 ## Interactive Demo
 
 Explore how a WoB agent perceives the DOM and takes actions to complete web tasks:
 
-<WorldOfBitsViz client:load />
+<WorldOfBitsViz client:visible />
 
 ## Benchmark Tasks
 
-WoB introduces three task categories of increasing complexity:
+WoB introduces three task categories of increasing complexity.
 
 ### MiniWoB
 
-100 hand-crafted web tasks with synthetic pages:
+100 hand-crafted web tasks with small synthetic pages:
 
 - **click-button** — click a specific button
 - **enter-text** — type text into an input field
 - **use-slider** — adjust a slider to a target value
 - **book-flight** — complete a multi-step booking form
 
-These tasks feature clean reward functions and controlled complexity.
+These tasks feature clean reward functions and controlled complexity — the "gym exercises" of web interaction.
 
 ### FormWoB
 
 Real flight booking websites (United, Alaska, etc.) packaged as reproducible environments:
 
-- Live HTTP traffic is cached via man-in-the-middle proxy
+- Live HTTP traffic is cached via a man-in-the-middle proxy
 - Enables offline training while approximating real web dynamics
 - Tests generalization to production websites
 
 ### QAWoB
 
-Crowdsourced question-answering tasks on live websites:
+Crowdsourced question-answering tasks on live websites. Queries are built from templates with fillable slots:
 
 $$
 \text{Query} = \text{Template}(\text{slot}_1, \text{slot}_2, \ldots)
 $$
 
 Examples:
+
 - *"What is the population of **Paris**?"* (Wikipedia)
 - *"Find flights from **NYC** to **LA** on **Dec 25**"* (Flight sites)
 
@@ -99,8 +110,9 @@ Observation → CNN(pixels) + MLP(DOM text) → LSTM → Policy(actions)
 ```
 
 Key design choices:
+
 - **Multimodal input**: combines visual features with semantic DOM information
-- **Recurrent memory**: LSTM tracks state across multiple interaction steps
+- **Recurrent memory**: an LSTM tracks state across multiple interaction steps (see [Understanding LSTMs](/understanding-lstms))
 - **Policy output**: coordinates $(x, y)$ for mouse, one-hot for keyboard
 
 ## Training Approaches
@@ -111,7 +123,7 @@ Key design choices:
 | **REINFORCE** | Policy gradient with sparse task rewards |
 | **Guided RL** | Warm-start with BC, then fine-tune with RL |
 
-Behavioral cloning alone achieves reasonable performance but struggles with recovery from errors. RL enables adaptation but requires reward shaping for complex tasks.
+Behavioral cloning alone achieves reasonable performance but struggles to recover from errors it never saw in demonstrations. RL enables adaptation but requires reward shaping for complex tasks. (For the RL side, see [Policy Gradient](/policy-gradient).)
 
 ## Performance Gap
 
@@ -123,7 +135,7 @@ Even with demonstrations and RL, significant gaps remain:
 | Multi-step forms | ~40% | 100% |
 | Open-domain QA | ~20% | 100% |
 
-This gap motivates continued research on web agents.
+This gap motivated years of continued research on web agents.
 
 ## Impact & Legacy
 
@@ -136,6 +148,15 @@ WoB pioneered the study of web-based agents and inspired subsequent benchmarks:
 
 Modern LLM-based agents (GPT-4V, Gemini) are now evaluated on these benchmarks.
 
-## Key Insight
+## Common Confusion
 
-By using the web as an environment, WoB bridges the gap between simulated benchmarks and real-world tasks—agents learn from the same rich, semantic content that humans create and interact with daily.
+- **WoB vs. MiniWoB**: World of Bits is the whole platform; MiniWoB is just its easiest task suite (and the part that survived longest, as MiniWoB++).
+- **Pixels-and-DOM vs. text-only agents**: WoB agents act through raw screen coordinates and keystrokes. Later LLM web agents often act on the DOM or text directly — an easier but less general interface.
+- **This is 2017-era RL, not LLMs**: the baseline agent is a CNN-LSTM trained with behavioral cloning and REINFORCE. Modern browser agents solve these tasks very differently, but on benchmarks descended from this one.
+
+## Where To Go Next
+
+- Read [Reinforcement Learning](/reinforcement-learning) for the framework WoB is built on.
+- Read [Policy Gradient](/policy-gradient) for the REINFORCE algorithm used to train the baseline agent.
+- Read [Understanding LSTMs](/understanding-lstms) for the recurrent memory in the agent architecture.
+- Read [DQN](/dqn) for the other landmark "RL from pixels" line of work, in Atari games.

@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import '../../lib/motion';
+import { createRng } from '../../lib/rng';
 
 interface Person {
   id: string;
@@ -17,18 +19,31 @@ interface TraceItem {
 const MEN = ['A', 'B', 'C', 'D'];
 const WOMEN = ['1', '2', '3', '4'];
 
-const shuffle = <T,>(arr: T[]) => [...arr].sort(() => Math.random() - 0.5);
+// Fisher-Yates. Sorting with a random comparator is both biased and
+// implementation-defined, so Node and the browser disagreed on the ordering and
+// the server-rendered preference lists did not survive hydration.
+const shuffle = <T,>(arr: T[], random: () => number) => {
+  const result = [...arr];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+};
 
-const randomPrefs = () => ({
-  men: MEN.map(id => ({ id, prefs: shuffle(WOMEN) })),
-  women: WOMEN.map(id => ({ id, prefs: shuffle(MEN) }))
-});
-
-const initState = () => {
-  const { men, women } = randomPrefs();
+const randomPrefs = (round: number) => {
+  const random = createRng(28871 + round * 7919);
   return {
-    men: men.map(m => ({ ...m, match: null, proposedIndex: 0, rejectedBy: [] as string[] })),
-    women: women.map(w => ({ ...w, match: null, proposedIndex: 0, rejectedBy: [] as string[] })),
+    men: MEN.map(id => ({ id, prefs: shuffle(WOMEN, random) })),
+    women: WOMEN.map(id => ({ id, prefs: shuffle(MEN, random) }))
+  };
+};
+
+const initState = (round = 0) => {
+  const { men, women } = randomPrefs(round);
+  return {
+    men: men.map(m => ({ ...m, match: null as string | null, proposedIndex: 0, rejectedBy: [] as string[] })),
+    women: women.map(w => ({ ...w, match: null as string | null, proposedIndex: 0, rejectedBy: [] as string[] })),
     step: 0,
     done: false,
     activeMan: null as string | null,
@@ -40,6 +55,7 @@ export function StableMarriageViz() {
   const [state, setState] = useState(initState);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(800);
+  const [round, setRound] = useState(0);
 
   const womenMap = useMemo(() => new Map(state.women.map(w => [w.id, w])), [state.women]);
 
@@ -93,7 +109,11 @@ export function StableMarriageViz() {
     return () => clearTimeout(t);
   }, [playing, state.done, state.step, speed, stepOnce]);
 
-  const reset = () => { setState(initState()); setPlaying(false); };
+  const reset = () => {
+    setState(initState(round + 1));
+    setRound(r => r + 1);
+    setPlaying(false);
+  };
 
   const blockingPairs = useMemo(() => {
     if (!state.done) return [] as string[];

@@ -19,41 +19,55 @@ resources:
 
 import { ViTViz } from '../../components/viz/ViTViz';
 
-**Vision Transformer (ViT)** demonstrated that pure Transformers, applied directly to sequences of image patches, can match or exceed CNNs on image classification—especially when pre-trained on large datasets.
+The **Vision Transformer (ViT)** applies a plain Transformer to images by treating an image as a sequence of small patches — like words in a sentence. It demonstrated that pure Transformers can match or exceed CNNs on image classification, especially when pre-trained on large datasets.
+
+> If this page feels too fast, read [Transformer](/transformer) first — ViT reuses the standard Transformer encoder almost unchanged. For the CNN approach it challenged, see [ResNet](/resnet).
+
+## Why Students Should Care
+
+- ViT showed that **one architecture can serve both language and vision**, ending the assumption that images require convolutions.
+- It is a striking example of the **scale-vs-inductive-bias trade-off**: with enough data, a general architecture beats a specialized one.
+- The patch-embedding idea underpins modern multimodal models — the same trick lets images enter an LLM.
+
+## A Quick Example
+
+A Transformer eats sequences of tokens. A sentence naturally splits into word tokens — but how do you tokenize a picture? ViT's answer: chop the image into a grid of small squares (say 16×16 pixels each), flatten each square into a vector, and treat those vectors as the "words" of the image. A 224×224 image becomes a sequence of 196 patch tokens, and from there the Transformer does not care that the data was ever an image.
 
 ## Core Idea: Images as Sequences
 
 Instead of convolutions, ViT treats an image as a sequence of patches:
 
-1. Split image into fixed-size patches (e.g., 16×16)
+1. Split the image into fixed-size patches (e.g., 16×16)
 2. Flatten each patch into a vector
 3. Project through a linear embedding
 4. Add positional embeddings
-5. Process with standard Transformer encoder
+5. Process with a standard Transformer encoder
 
 $$
 z_0 = [x_{class}; x_1^p E; x_2^p E; \ldots; x_N^p E] + E_{pos}
 $$
 
-where $E$ is the patch embedding projection and $E_{pos}$ are learnable position embeddings.
+where $E$ is the patch embedding projection and $E_{pos}$ are learnable position embeddings. In plain English: the input is a class token plus one embedded vector per patch, with position information added so the model knows where each patch came from.
 
 ## Patch Embedding
 
-For an image of size $H \times W$ with patch size $P$:
+How many patches does an image produce? For an image of size $H \times W$ with patch size $P$:
 
 $$
 N = \frac{HW}{P^2}
 $$
 
-Each patch $x_p \in \mathbb{R}^{P^2 \cdot C}$ is projected to dimension $D$:
+Each patch $x_p \in \mathbb{R}^{P^2 \cdot C}$ (all its pixel values, across $C$ color channels) is projected to dimension $D$ by a single learned matrix:
 
 $$
 x_p E \in \mathbb{R}^D, \quad E \in \mathbb{R}^{(P^2 \cdot C) \times D}
 $$
 
-## The [CLS] Token
+The takeaway: turning a patch into a token is just one linear layer — no convolutions needed.
 
-A learnable embedding $x_{class}$ is prepended to the sequence. After processing through L Transformer layers, its output serves as the image representation:
+## The `[CLS]` Token
+
+Borrowed from [BERT](/bert): a learnable embedding $x_{class}$ is prepended to the sequence. It carries no image content itself, but through self-attention it gathers information from every patch. After processing through $L$ Transformer layers, its output serves as the summary representation of the whole image:
 
 $$
 y = \text{LN}(z_L^0)
@@ -63,7 +77,8 @@ This is passed to an MLP head for classification.
 
 ## Architecture
 
-Standard Transformer encoder with:
+ViT is a standard Transformer encoder with:
+
 - Multi-head self-attention
 - MLP blocks (GELU activation)
 - Layer normalization (pre-norm variant)
@@ -75,23 +90,41 @@ Standard Transformer encoder with:
 | ViT-L/16 | 24 | 1024 | 4096 | 16 | 307M |
 | ViT-H/14 | 32 | 1280 | 5120 | 16 | 632M |
 
+(The number after the slash is the patch size — ViT-B/16 uses 16×16 patches.)
+
 ## Interactive Visualization
 
 See how ViT splits images into patches and applies self-attention:
 
-<ViTViz client:load />
+<ViTViz client:visible />
 
 ## Key Insight: Scale Matters
 
-ViT underperforms CNNs when trained on small datasets (lacks inductive biases). But with large-scale pre-training (ImageNet-21k, JFT-300M), it excels:
+CNNs bake in useful assumptions about images (nearby pixels relate; patterns repeat across locations). These **inductive biases** help when data is scarce. ViT has almost none of them — so it underperforms CNNs when trained on small datasets. But with large-scale pre-training (ImageNet-21k, JFT-300M), it learns those regularities from data and excels:
 
 > "When pre-trained on large amounts of data, the Transformer architecture can match or exceed state-of-the-art CNNs."
+
+The takeaway: **built-in assumptions win with little data; learned assumptions win with lots of data**.
 
 ## Impact
 
 ViT unified vision and language under the same architecture, enabling:
-- CLIP (vision-language)
+
+- [CLIP](/clip) (vision-language)
 - DALL-E (image generation)
 - Multimodal models (GPT-4V, Gemini)
 
 The patch embedding + Transformer paradigm now dominates computer vision.
+
+## Common Confusion
+
+- **ViT is an encoder, not a generator.** The original ViT classifies images; image *generation* models like DALL-E build on related ideas but are different systems.
+- **Patches are not convolutions.** The patch embedding is a single linear projection applied to non-overlapping squares — there is no sliding filter or pooling hierarchy.
+- **"Transformers beat CNNs" comes with a caveat.** The result holds under large-scale pre-training; on small datasets alone, CNNs' inductive biases still help.
+
+## Where To Go Next
+
+- Read [Transformer](/transformer) for the architecture ViT borrows wholesale
+- Read [BERT](/bert) for the origin of the `[CLS]` token and encoder-style pre-training
+- Read [ResNet](/resnet) and [AlexNet](/alexnet) for the CNN lineage ViT challenged
+- Read [CLIP](/clip) for vision-language models built on ViT encoders

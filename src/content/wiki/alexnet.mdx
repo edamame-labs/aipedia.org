@@ -15,7 +15,21 @@ resources:
 
 import { AlexNetViz } from '../../components/viz/AlexNetViz';
 
-**AlexNet** is the deep convolutional neural network that won the 2012 ImageNet Large Scale Visual Recognition Challenge (ILSVRC), reducing the top-5 error rate from 26% to 15.3%. This landmark result demonstrated that deep learning could dramatically outperform traditional computer vision methods.
+**AlexNet** is the deep convolutional neural network that won the 2012 ImageNet Large Scale Visual Recognition Challenge (ILSVRC). It cut the top-5 error rate from 26% to 15.3%, a huge jump that convinced the field that deep learning could dramatically outperform traditional computer vision methods.
+
+> If convolutional networks are new to you, start with [CS231n](/cs231n), Stanford's course on CNNs. For what came after AlexNet, see [ResNet](/resnet).
+
+## Why Students Should Care
+
+- AlexNet is widely considered the **starting gun of the modern deep learning era**. Almost every architecture you will study came after it, and often in response to it.
+- Its ingredients — ReLU, [dropout](/dropout), GPU training, big datasets — are still standard practice today.
+- It is a compact case study in why deep learning works: a simple recipe, scaled up, beating years of hand-crafted engineering.
+
+## The Problem It Solved
+
+Before 2012, image classification systems were built by hand: researchers designed feature detectors (edges, corners, textures) and then trained a shallow classifier on top. Progress was slow and incremental.
+
+AlexNet took the opposite approach: feed the network raw pixels and let it **learn its own features** from 1.2 million labeled ImageNet images. The result was not a small improvement — it was a 10+ percentage point gap over the runner-up.
 
 ## Architecture
 
@@ -25,42 +39,57 @@ $$
 \text{Input} \rightarrow \text{Conv}_1 \rightarrow \text{Conv}_2 \rightarrow \text{Conv}_3 \rightarrow \text{Conv}_4 \rightarrow \text{Conv}_5 \rightarrow \text{FC}_6 \rightarrow \text{FC}_7 \rightarrow \text{FC}_8
 $$
 
-The network processes 224×224 RGB images through progressively smaller spatial dimensions but increasing channel depth, culminating in a 1000-way softmax for ImageNet classification.
+The network takes a 224×224 RGB image and processes it through progressively smaller spatial dimensions but increasing channel depth. Intuitively, early layers see small patches and detect simple patterns; later layers see larger regions and detect whole objects. The final layer is a 1000-way softmax, one output per ImageNet category.
 
 ## Key Innovations
 
-**ReLU Activation**: Instead of tanh or sigmoid, AlexNet used Rectified Linear Units:
+**ReLU activation.** Instead of tanh or sigmoid, AlexNet used Rectified Linear Units:
 
 $$
 f(x) = \max(0, x)
 $$
 
-This non-saturating nonlinearity enabled 6× faster training compared to tanh networks.
+In plain English: pass positive values through, zero out negative ones. Because ReLU does not flatten out (saturate) for large positive inputs, gradients stay healthy and training runs about 6× faster than with tanh.
 
-**Dropout**: During training, neurons are randomly zeroed with probability 0.5:
+**Dropout.** During training, neurons are randomly zeroed with probability 0.5:
 
 $$
 \tilde{h} = h \cdot m, \quad m_i \sim \text{Bernoulli}(0.5)
 $$
 
-This prevents complex co-adaptations and reduces overfitting in the large fully-connected layers.
+The idea: if any neuron can vanish at any moment, no neuron can rely too heavily on specific partners. This prevents complex co-adaptations and reduces overfitting in the large fully-connected layers. See [Dropout](/dropout) for the full story.
 
-**Local Response Normalization**: Inspired by lateral inhibition in biological neurons, LRN normalizes across adjacent feature maps at each spatial position.
+**Local Response Normalization.** Inspired by lateral inhibition in biological neurons (active neurons suppressing their neighbors), LRN normalizes activations across adjacent feature maps at each spatial position.
 
-**Overlapping Pooling**: Using 3×3 pooling with stride 2 (overlapping) instead of non-overlapping pooling slightly reduced error rates.
+**Overlapping pooling.** Using 3×3 pooling windows with stride 2 — so neighboring windows overlap — slightly reduced error rates compared to non-overlapping pooling.
+
+You do not need to memorize the details. The important idea is: **each trick either made training faster (ReLU, GPUs) or fought overfitting (dropout, pooling choices)**.
 
 ## Interactive Demo
 
 Explore AlexNet's layer-by-layer architecture and key innovations:
 
-<AlexNetViz client:load />
+<AlexNetViz client:visible />
 
 ## Historical Impact
 
-AlexNet's victory was decisive: the runner-up used hand-crafted features and achieved 26.2% error. This 10+ percentage point gap proved that:
+AlexNet's victory was decisive: the runner-up used hand-crafted features and achieved 26.2% error. That 10+ percentage point gap proved three things at once:
 
-- Deep networks could learn hierarchical features automatically
+- Deep networks could learn hierarchical features automatically — no hand engineering needed
 - GPUs were essential for training large models
 - Sufficient data (1.2M ImageNet images) enables generalization
 
 The paper has over 100,000 citations and is considered the catalyst of the modern deep learning era.
+
+## Common Confusion
+
+- **AlexNet did not invent convolutional networks.** CNNs existed earlier; AlexNet showed that a deep CNN, trained on GPUs with enough data, could win at scale.
+- **AlexNet is a specific architecture; ImageNet is the dataset; ILSVRC is the competition.** "Winning ImageNet" is shorthand for winning the ILSVRC challenge on the ImageNet dataset.
+- **[Dropout](/dropout) has its own paper and page.** AlexNet is one of its most famous applications, not its origin.
+
+## Where To Go Next
+
+- Read [ResNet](/resnet) for how skip connections took networks from 8 layers to 150+
+- Read [Dropout](/dropout) for a deeper look at AlexNet's regularization trick
+- Read [CS231n](/cs231n) for the Stanford course that teaches this whole lineage
+- Read [Vision Transformer](/vision-transformer) for the architecture that eventually challenged CNNs

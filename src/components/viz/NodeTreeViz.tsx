@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import '../../lib/motion';
 
 const sigmoid = (x: number) => 1 / (1 + Math.exp(-x));
 const softmax = (xs: number[]) => {

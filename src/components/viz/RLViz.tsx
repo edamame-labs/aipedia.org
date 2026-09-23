@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-
+import '../../lib/motion';
 const GRID_SIZE = 5;
 const GOAL = { x: 4, y: 4 };
 const START = { x: 0, y: 0 };

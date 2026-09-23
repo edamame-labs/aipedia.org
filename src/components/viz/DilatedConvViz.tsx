@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import '../../lib/motion';
 
 const GRID_SIZE = 9;
 const CELL_SIZE = 28;

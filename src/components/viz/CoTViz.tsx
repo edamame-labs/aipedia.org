@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import '../../lib/motion';
 
 const PROBLEM = "A store has 23 apples. If 8 are sold in the morning and 12 more arrive in the afternoon, how many apples are there?";
 

@@ -15,7 +15,19 @@ resources:
 
 import { MDLWeightsViz } from '../../components/viz/MDLWeightsViz';
 
-**Keeping Neural Networks Simple** by Hinton and van Camp introduced a principled approach to regularization: add noise to weights during training, effectively limiting the precision (and thus description length) of the learned parameters.
+**Keeping Neural Networks Simple** by Hinton and van Camp (1993) turned regularization into an information-theory problem: train networks with deliberately *noisy* weights, because noisy weights need fewer bits to describe — and models that can be described in fewer bits generalize better.
+
+> Prerequisite: the [MDL Tutorial](/mdl-tutorial) — this paper is the MDL principle applied to neural network weights. Skim that page's "Core Idea" section if nothing else.
+
+## Why Students Should Care
+
+- This 1993 paper is the origin of **variational inference for neural networks** — the math here reappears almost unchanged in [VAEs](/vae), Bayesian neural nets, and modern compression-based views of generalization.
+- It answers a deep question simply: *why* do smaller/simpler models generalize? Because they encode fewer bits of the training set, so they cannot have memorized the noise.
+- It anticipated [dropout](/dropout)-style noise injection and learned quantization decades early.
+
+## A Concrete Way In
+
+Imagine you must fax a trained network to a friend, and every bit costs money. Weight 0.73916402... is expensive. But do you really need all those digits? If sending "roughly 0.74, give or take 0.02" barely hurts accuracy, most of those digits were describing noise, not knowledge. This paper makes networks *train themselves* to need fewer digits.
 
 ## The MDL Principle
 
@@ -26,55 +38,59 @@ L(\text{model}) + L(\text{data} | \text{model})
 $$
 
 For neural networks:
+
 $$
 L(\text{weights}) + L(\text{errors} | \text{weights})
 $$
 
-## The Key Insight
+A network with fewer effective bits in its weights spends less on the first term; a network that fits the data well spends less on the second. Training should minimize the sum.
 
-Instead of precise weights, transmit *noisy* weights:
+## The Key Insight: Noisy Weights Are Cheap Weights
+
+Instead of transmitting precise weights, transmit *noisy* ones:
 
 $$
 \tilde{w} = w + \epsilon, \quad \epsilon \sim \mathcal{N}(0, \sigma^2)
 $$
 
 Higher noise $\sigma$ means:
-- Fewer bits to describe weights (can use coarser precision)
-- More bits to describe prediction errors
 
-The network learns to find the optimal noise level.
+- Fewer bits to describe the weights (coarser precision suffices)
+- More bits to describe the prediction errors (the network is less exact)
+
+The trade-off differs per weight — some weights matter a lot, others barely — so the network learns the optimal noise level *for each weight* during training.
 
 ## Interactive Demo
 
 Explore the trade-off between weight precision and noise:
 
-<MDLWeightsViz client:load />
+<MDLWeightsViz client:visible />
 
 ## Mathematical Framework
 
-Weight distribution after adding noise:
+Treat each weight not as a number but as a distribution:
 
 $$
 q(w) = \mathcal{N}(w; \mu, \sigma^2)
 $$
 
-The description length (in bits) for communicating weights:
+The description length (in bits) for communicating weights drawn from $q$ relative to an agreed prior $p$ (often $\mathcal{N}(0, 1)$):
 
 $$
 L(w) \approx -\log \frac{q(w)}{p(w)}
 $$
 
-where $p(w)$ is a prior (often $\mathcal{N}(0, 1)$).
+The takeaway: the cost of a weight is measured by how much its learned distribution $q$ deviates from the prior $p$ — a weight that stays vague and prior-like is nearly free; a sharply pinned-down weight is expensive.
 
 ## The Bits-Back Argument
 
-A subtle insight: when transmitting weights with a known distribution, the receiver can "give back" some bits:
+A subtle and famous trick. When the sender transmits weights sampled from a known distribution $q$, the randomness used to pick the sample can itself carry other information, which the receiver can recover — the sender effectively gets those bits refunded:
 
 $$
 \text{Effective bits} = H[q] - D_{KL}[q \| p]
 $$
 
-This is the same KL term that appears in VAEs!
+Do not worry if this feels slippery on first read — it is. The punchline is that the *true* cost of the weights is exactly the KL divergence between $q$ and the prior. That is the same KL term that appears in [VAEs](/vae), derived here fifteen years earlier.
 
 ## Connection to Modern Regularization
 
@@ -92,11 +108,27 @@ This 1993 paper anticipated:
 1. Forward pass with noisy weights: $\tilde{w}_i = w_i + \mathcal{N}(0, \sigma_i^2)$
 2. Compute expected loss: $\mathbb{E}_\epsilon[\mathcal{L}(x, y; w + \epsilon)]$
 3. Update both $w$ and $\sigma$ via gradient descent
-4. Network learns which weights need precision
+4. The network learns which weights need precision and which can stay fuzzy
 
 ## Why This Matters
 
 This paper established:
-- **Information-theoretic regularization**: Not just heuristics
-- **Learned precision**: Different weights need different precision
-- **Compression = generalization**: Simpler models generalize better
+
+- **Information-theoretic regularization**: a derivation, not a heuristic
+- **Learned precision**: different weights need different precision
+- **Compression = generalization**: simpler (shorter-description) models generalize better
+
+## Common Confusion
+
+- **This paper vs. the [MDL Tutorial](/mdl-tutorial)**: Grünwald's tutorial explains the MDL *principle* in general; this paper is one specific application — compressing neural network weights.
+- **Noise here vs. dropout**: [dropout](/dropout) zeroes activations at random; this method adds Gaussian noise to *weights*, with a per-weight learned magnitude and an information-theoretic justification.
+- **Description length vs. parameter count**: a network with many low-precision (high-noise) weights can have a *shorter* description than a network with few high-precision ones. Bits, not parameters, are what count.
+- **Not the same as post-hoc quantization**: precision is limited *during training*, so the network adapts to it, rather than being rounded after the fact.
+
+## Where To Go Next
+
+- Read [MDL Tutorial](/mdl-tutorial) for the general principle behind this paper.
+- Read [Kolmogorov Complexity](/kolmogorov-complexity) for the deepest version of "short descriptions are good."
+- Read [VAE](/vae) to see the same KL-divergence machinery powering deep generative models.
+- Read [Variational Lossy Autoencoder](/variational-lossy-autoencoder) for a modern analysis of what variational codes capture.
+- Read [Dropout](/dropout) for the heuristic noise-based regularizer this paper foreshadowed.

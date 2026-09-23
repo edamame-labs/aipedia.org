@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import '../../lib/motion';
 
 type Gate = 'forget' | 'input' | 'cell' | 'output' | null;
 

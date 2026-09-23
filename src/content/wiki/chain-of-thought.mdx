@@ -23,49 +23,64 @@ resources:
 
 import { CoTViz } from '../../components/viz/CoTViz';
 
-**Chain-of-Thought (CoT) Prompting** dramatically improves LLM performance on reasoning tasks by asking the model to show its work—generating intermediate steps before the final answer.
+**Chain-of-Thought (CoT) Prompting** is a simple trick that dramatically improves language model performance on reasoning tasks: instead of asking for the answer directly, you ask the model to show its work — writing out intermediate steps before the final answer.
+
+> If you are new to prompting language models, read [In-Context Learning](/in-context-learning) first. CoT builds directly on the idea of putting examples in the prompt.
+
+## Why Students Should Care
+
+- CoT is one of the cheapest ways to make a model better at math, logic, and multi-step problems — no training required, just a different prompt.
+- It is the ancestor of modern "reasoning models" that generate long internal thoughts before answering.
+- It is a clear example of an **emergent ability**: a behavior that appears only when models get large enough.
 
 ## The Problem
 
-Standard prompting fails on multi-step reasoning:
+Ask a model a multi-step question directly, and it often guesses:
 
 ```
 Q: Roger has 5 tennis balls. He buys 2 cans of 3 balls each. How many does he have?
 A: 11 ✗ (LLM might output wrong answer directly)
 ```
 
+The model has to compress a whole calculation into a single predicted token. That is a lot to ask.
+
 ## The Solution: Show Your Work
 
-CoT prompting includes reasoning steps:
+CoT prompting includes the reasoning steps, the way a student would write them on an exam:
 
 ```
 Q: Roger has 5 tennis balls. He buys 2 cans of 3 balls each. How many does he have?
 A: Roger starts with 5 balls. 2 cans × 3 balls = 6 balls. 5 + 6 = 11 balls. ✓
 ```
 
+The model now produces the intermediate arithmetic *before* the answer, and the answer improves.
+
 ## Why It Works
 
 By generating intermediate steps, the model:
+
 1. **Decomposes** complex problems into simpler sub-problems
-2. **Maintains state** through the reasoning process
+2. **Maintains state** through the reasoning process (earlier steps stay visible in the context)
 3. **Reduces error** by checking each step
-4. **Allocates compute** proportional to problem difficulty
+4. **Allocates compute** proportional to problem difficulty — harder problems get more tokens, and more tokens means more computation
 
 ## Two Approaches
 
 ### Few-Shot CoT
 
-Provide examples with reasoning chains:
+Give the model worked examples that include reasoning chains, then ask your real question:
 
 $$
 \text{Prompt} = [(x_1, r_1, y_1), \ldots, (x_k, r_k, y_k), x_{test}]
 $$
 
-where $r_i$ are the reasoning chains.
+where each $x_i$ is a question, $r_i$ is the written-out reasoning chain, and $y_i$ is the answer.
+
+You do not need to memorize the notation. The idea is: **the prompt contains a few solved problems with their reasoning, and the model imitates that pattern on the new problem.**
 
 ### Zero-Shot CoT
 
-Simply append "Let's think step by step":
+Even simpler — no examples at all. Just append "Let's think step by step":
 
 ```
 Q: [problem]
@@ -78,9 +93,11 @@ This single phrase unlocks reasoning in large models.
 
 Compare standard vs chain-of-thought prompting:
 
-<CoTViz client:load />
+<CoTViz client:visible />
 
 ## Performance Gains
+
+The improvements are not subtle:
 
 | Task | Standard | Chain-of-Thought |
 |------|----------|------------------|
@@ -98,17 +115,17 @@ $$
 \text{Accuracy gain} \propto \log(\text{model size})
 $$
 
-Small models may produce incoherent chains; large models generate meaningful reasoning.
+Small models may produce incoherent chains; large models generate meaningful reasoning. In other words, CoT is not a trick you can use to rescue a tiny model — the underlying capability has to be there first. See [Scaling Laws](/scaling-laws) for why model size matters so much.
 
 ## Self-Consistency
 
-Improve further by sampling multiple chains and voting:
+You can improve further by sampling several different reasoning chains and letting them vote:
 
 $$
 \hat{y} = \arg\max_y \sum_{i=1}^{n} \mathbf{1}[y_i = y]
 $$
 
-Generate $n$ reasoning paths, extract answers, take majority vote.
+In plain English: generate $n$ reasoning paths, extract the final answer from each, and take the majority vote. Different chains make different mistakes, so the vote is more reliable than any single chain.
 
 ## Variants
 
@@ -132,3 +149,16 @@ Generate $n$ reasoning paths, extract answers, take majority vote.
 - Simple factual questions
 - Single-step tasks
 - Creative writing
+
+## Common Confusion
+
+- **CoT vs. in-context learning**: [In-context learning](/in-context-learning) is the general ability to learn a task from examples in the prompt. CoT is a specific way of writing those examples (or the instruction) so they include reasoning steps.
+- **CoT vs. fine-tuning**: CoT changes only the prompt. The model's weights are untouched — nothing is trained.
+- **"Showing work" vs. "true reasoning"**: A CoT chain is text the model generates; it is not a guaranteed window into how the model actually computed the answer. The chain can look plausible while the real cause of the answer lies elsewhere.
+
+## Where To Go Next
+
+- Read [In-Context Learning](/in-context-learning) for the prompting foundation CoT builds on.
+- Read [Scaling Laws](/scaling-laws) to understand why CoT only emerges in large models.
+- Read [GPT](/gpt) for the family of models where these prompting behaviors were first studied at scale.
+- Read [RLHF](/rlhf) to see how models are trained to follow instructions like "think step by step" in the first place.

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import '../../lib/motion';
 import {
   ScatterChart,
   Scatter,
@@ -9,10 +10,13 @@ import {
   Cell,
   Line,
 } from 'recharts';
+import { createRng } from '../../lib/rng';
+
+const priorRandom = createRng(34681);
 
 const PRIOR_SAMPLES = Array.from({ length: 80 }, () => ({
-  z1: Math.random() * 4 - 2,
-  z2: Math.random() * 4 - 2,
+  z1: priorRandom() * 4 - 2,
+  z2: priorRandom() * 4 - 2,
 }));
 
 const interpolate = (a: number, b: number, t: number) => a * (1 - t) + b * t;
@@ -24,7 +28,8 @@ export function VAEViz() {
   const [interpT, setInterpT] = useState(0.5);
 
   const zSample = useMemo(() => {
-    return mu.map((m, i) => m + sigma[i] * (Math.random() * 2 - 1));
+    const random = createRng(50021 + Math.round((mu[0] + sigma[0]) * 1000));
+    return mu.map((m, i) => m + sigma[i] * (random() * 2 - 1));
   }, [mu, sigma]);
 
   const zInterp = [

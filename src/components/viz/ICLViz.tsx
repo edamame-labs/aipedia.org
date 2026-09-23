@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import '../../lib/motion';
 
 const EXAMPLES = [
   { input: 'The movie was terrible', output: 'negative' },

@@ -31,11 +31,23 @@ resources:
 
 import { GBDTViz } from '../../components/viz/GBDTViz';
 
-**Gradient Boosted Decision Trees (GBDT)** are an ensemble method that builds decision trees sequentially, where each new tree is trained to correct the errors of the current ensemble.
+**Gradient Boosted Decision Trees (GBDT)** are an ensemble method that builds decision trees one at a time, where each new tree is trained to correct the mistakes the current ensemble is still making. The final model is the sum of all the trees.
+
+> This is a classical machine learning method, not deep learning — no neural networks involved. But the word "gradient" here is the same gradient as in [Backpropagation](/backpropagation): both methods follow the derivative of a loss downhill.
+
+## Why Students Should Care
+
+- On tabular data (spreadsheet-style rows and columns), GBDT implementations like XGBoost and LightGBM are still the method to beat — they routinely win Kaggle competitions where deep learning does not.
+- GBDT is the clearest example of **boosting**: turning many weak models into one strong one.
+- The "gradient descent in function space" idea is a genuinely beautiful piece of ML theory that connects trees to the optimization you know from neural networks.
+
+## A Concrete Picture First
+
+Suppose you are predicting house prices. Your first tree is crude: it predicts 300,000 for a house that actually sells for 370,000 — an error of 70,000. Now train a *second* tree whose job is not to predict prices, but to predict those **errors**. Add its output to the first tree's prediction, and the combined model is closer to the truth. Repeat: every new tree cleans up whatever error is left. That is boosting.
 
 ## Core Idea: Gradient Descent in Function Space
 
-GBDT performs **gradient descent over functions** rather than parameters. We iteratively improve a model $F(x)$ by adding a new function (tree) that points in the direction of steepest loss reduction.
+Here is the elegant generalization. GBDT performs **gradient descent over functions** rather than parameters. Instead of nudging weights, we iteratively improve a model $F(x)$ by adding a new function (a tree) that points in the direction of steepest loss reduction.
 
 At iteration $m$:
 
@@ -46,21 +58,23 @@ $$
 - $h_m(x)$ is a regression tree
 - $\eta$ is the learning rate
 
+You do not need to memorize the notation. The important idea is: **the model is a running sum of trees, and each new tree is a small step downhill on the loss.**
+
 ## Loss and Gradients
 
-For squared error loss:
+Why is "predict the errors" the same as "follow the gradient"? For squared error loss:
 
 $$
 L(y, F(x)) = \frac{1}{2}(y - F(x))^2
 $$
 
-The negative gradient (residual) is:
+The negative gradient of the loss with respect to the prediction is:
 
 $$
 -\frac{\partial L}{\partial F(x)} = y - F(x)
 $$
 
-Each tree is trained to predict these residuals.
+That is exactly the residual — the leftover error. So each tree trained to predict residuals is literally fitting the negative gradient. For other losses (classification, ranking), the residuals are replaced by that loss's gradients, and the same machinery works.
 
 ## Interactive Visualization
 
@@ -70,15 +84,19 @@ The demo below shows:
 - Individual trees contributing to the final model
 - Loss decreasing as trees are added
 
-<GBDTViz client:load />
+<GBDTViz client:visible />
 
 ## Key Hyperparameters
 
-- **learning_rate (η)** – step size for each tree; smaller values improve generalization
+- **learning_rate (η)** – step size for each tree; smaller values improve generalization (but need more trees)
 - **n_estimators** – number of trees in the ensemble
-- **max_depth** – controls tree complexity and interaction order
+- **max_depth** – controls tree complexity and interaction order (how many features a single tree can combine)
+
+The classic trade: lower the learning rate, raise the number of trees.
 
 ## GBDT vs Random Forest
+
+Both are tree ensembles, but they combine trees in opposite ways: random forests train many independent trees in parallel and average them; GBDT trains trees sequentially, each depending on all previous ones.
 
 | Aspect | GBDT | Random Forest |
 |------|------|---------------|
@@ -87,20 +105,31 @@ The demo below shows:
 | Optimization | Gradient-based | Bagging |
 | Overfitting | Controlled via learning rate | Controlled via averaging |
 
-## Popular Implementations
-
-- **XGBoost** – https://arxiv.org/abs/1603.02754
-- **LightGBM** – https://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree
-- **CatBoost** – https://arxiv.org/abs/1706.09516
-
-Widely available in:
-- `xgboost`
-- `lightgbm`
-- `catboost`
-- `sklearn.ensemble.GradientBoosting*`
-
 ## When to Use GBDT
 
 - Tabular data with mixed feature types
 - Medium-sized datasets
 - When strong performance and interpretability matter
+
+For images, audio, and text, deep learning dominates — but for a table of customer records, reach for GBDT first.
+
+## Common Confusion
+
+- **Boosting vs. bagging**: boosting (GBDT) builds trees *sequentially*, each correcting the last; bagging (random forests) builds trees *independently* and averages them.
+- **Gradient boosting vs. gradient descent**: same gradient idea, different space — gradient descent updates parameters; gradient boosting adds whole functions (trees).
+- **GBDT is not deep learning.** No neural networks, no [backpropagation](/backpropagation) — though both follow gradients of a loss.
+- **"Residuals" are a special case.** Trees fit plain residuals only under squared error; in general they fit the negative gradient of whatever loss you chose.
+
+## Where To Go Next
+
+- Read [Backpropagation](/backpropagation) to compare gradient descent in parameter space with the function-space version here.
+- Read [Adam](/adam) for how gradient-based optimization is tuned in deep learning.
+- Read [Scaling Laws](/scaling-laws) for how deep learning behaves in the regimes where it *does* beat trees.
+
+## Libraries
+
+GBDT is widely available in:
+- `xgboost`
+- `lightgbm`
+- `catboost`
+- `sklearn.ensemble.GradientBoosting*`

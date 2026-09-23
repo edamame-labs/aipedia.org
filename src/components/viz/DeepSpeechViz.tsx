@@ -1,17 +1,20 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import '../../lib/motion';
+import { createRng } from '../../lib/rng';
 
 const SPECTROGRAM_HEIGHT = 80;
 const SPECTROGRAM_WIDTH = 200;
 
 function generateSpectrogram(): number[][] {
+  const random = createRng(81149);
   const data: number[][] = [];
   for (let i = 0; i < 40; i++) {
     const row: number[] = [];
     for (let j = 0; j < 100; j++) {
       const freq = Math.sin(j * 0.1 + i * 0.2) * 0.3;
       const energy = Math.exp(-((i - 20) ** 2) / 200) * Math.exp(-((j % 25 - 12) ** 2) / 50);
-      row.push(Math.max(0, Math.min(1, freq + energy + Math.random() * 0.2)));
+      row.push(Math.max(0, Math.min(1, freq + energy + random() * 0.2)));
     }
     data.push(row);
   }

@@ -15,20 +15,32 @@ resources:
 
 import { MDLTutorialViz } from '../../components/viz/MDLTutorialViz';
 
-**A Tutorial Introduction to the Minimum Description Length Principle** by Peter Grünwald is the definitive guide to MDL—a principled approach to model selection based on data compression.
+**A Tutorial Introduction to the Minimum Description Length Principle** by Peter Grünwald is the definitive guide to MDL — the idea that learning *is* compression: the best model of your data is the one that lets you describe the data in the fewest bits.
+
+> This page pairs naturally with [Kolmogorov Complexity](/kolmogorov-complexity), which supplies the theory of "shortest descriptions." MDL is the practical, computable cousin of that theory.
+
+## Why Students Should Care
+
+- MDL gives a principled answer to the most common question in practice: **how complex should my model be?** (What polynomial degree? How many clusters? Which features?)
+- It formalizes Occam's razor — "prefer simpler explanations" stops being a slogan and becomes an equation.
+- The compression view of learning runs straight through modern ML: regularization, [variational autoencoders](/vae), and the argument that LLMs are powerful *because* they compress the internet well.
+
+## A Concrete Example First
+
+Suppose you have 100 noisy data points and you must fit a polynomial. A degree-1 line misses the curvature (big errors). A degree-99 polynomial hits every point exactly (zero error) but is obviously absurd — it has memorized the noise. Some middle degree is right. But which, exactly, and *why*?
+
+MDL's answer: imagine you must transmit the dataset to a friend. You could send the model (cheap for a line, expensive for 100 coefficients) plus the errors the model makes (expensive for the line, cheap for a good fit). The best model is the one that minimizes the **total** message length.
 
 ## The Core Idea
-
-The best model is the one that **compresses data most**:
 
 $$
 L_{\text{total}} = L(\text{model}) + L(\text{data}|\text{model})
 $$
 
-- $L(\text{model})$: Bits to describe the model itself
-- $L(\text{data}|\text{model})$: Bits to describe prediction errors
+- $L(\text{model})$: bits to describe the model itself
+- $L(\text{data}|\text{model})$: bits to describe the prediction errors
 
-Minimize the sum, not just the error.
+Minimize the sum, not just the error. An overfit model wins the second term but loses badly on the first; an underfit model does the reverse.
 
 ## Occam's Razor, Formalized
 
@@ -38,43 +50,43 @@ $$
 \text{Simple model} \Rightarrow \text{Low } L(\text{model})
 $$
 
-But simpler models may have higher errors. MDL finds the optimal trade-off.
+But simpler models may have higher errors — a bigger $L(\text{data}|\text{model})$. MDL finds the optimal trade-off, automatically. There is no tuning knob for "how much to penalize complexity"; the bit-counting does it.
 
 ## Interactive Demo
 
 Compare models of varying complexity:
 
-<MDLTutorialViz client:load />
+<MDLTutorialViz client:visible />
 
 ## Two-Part Codes
 
-The simplest MDL approach:
+The simplest version of MDL is exactly the transmit-to-a-friend scheme above:
 
 1. Encode the model using $L_1$ bits
 2. Encode the data given the model using $L_2$ bits
-3. Choose model minimizing $L_1 + L_2$
+3. Choose the model minimizing $L_1 + L_2$
 
-This is "crude" MDL—refined versions exist.
+This is "crude" MDL. It works, but the split into two parts is somewhat arbitrary — refined versions fix that.
 
 ## Connection to Bayesian Inference
 
-MDL relates to the Bayesian posterior:
+MDL relates to the Bayesian posterior. Take logs of Bayes' rule:
 
 $$
 \log P(\text{model}|\text{data}) = \log P(\text{data}|\text{model}) + \log P(\text{model}) - \log P(\text{data})
 $$
 
-Maximizing posterior ≈ minimizing description length.
+Since an event with probability $P$ costs about $-\log P$ bits to encode, maximizing the posterior is (approximately) minimizing description length: the prior plays the role of the model-encoding cost, and the likelihood plays the role of the error-encoding cost.
 
 ## Normalized Maximum Likelihood
 
-For refined MDL, use the **stochastic complexity**:
+Refined MDL replaces the two-part code with the **stochastic complexity**, based on normalized maximum likelihood:
 
 $$
 \text{COMP}(x | \mathcal{M}) = \log \frac{P(x | \hat{\theta}(x), \mathcal{M})}{\sum_{x'} P(x' | \hat{\theta}(x'), \mathcal{M})}
 $$
 
-This accounts for model flexibility more carefully.
+You do not need to memorize this. The idea: a model class is penalized by how well it *could have* fit every possible dataset. A very flexible class fits everything well, so its denominator is large — flexibility itself is what gets charged, not just parameter count.
 
 ## Key Applications
 
@@ -87,16 +99,32 @@ This accounts for model flexibility more carefully.
 
 ## MDL vs. Other Criteria
 
+You may have met AIC and BIC in a statistics class. They live in the same family:
+
 | Criterion | Formula |
 |-----------|---------|
 | AIC | $-2\log L + 2k$ |
 | BIC | $-2\log L + k\log n$ |
 | MDL | $-\log L + \text{COMP}(\mathcal{M})$ |
 
-MDL is often equivalent to BIC but has stronger theoretical foundations.
+MDL is often equivalent to BIC in the large-sample limit but has stronger theoretical foundations — its penalty is derived from coding, not chosen as a convention.
 
 ## Practical Insights
 
-1. **More complex ≠ Better**: Overfitting wastes bits on noise
-2. **Compression = Learning**: A good compressor is a good predictor
-3. **Prior knowledge**: Model encoding reflects assumptions
+1. **More complex is not better**: overfitting literally wastes bits encoding noise
+2. **Compression = learning**: a good compressor of the data is a good predictor of it
+3. **Prior knowledge counts**: how you encode models reflects your assumptions, just like a Bayesian prior
+
+## Common Confusion
+
+- **MDL vs. Kolmogorov complexity**: [Kolmogorov complexity](/kolmogorov-complexity) is the ideal, uncomputable "shortest program" notion. MDL restricts descriptions to a chosen model class, which makes the lengths actually computable.
+- **MDL vs. Bayes**: closely related (the correspondence above), but MDL needs no belief that any model is "true" — it is about compression, not truth.
+- **"Description length" is not file size**: no file is literally compressed. Code lengths are computed from probabilities via $-\log P$.
+- **Crude vs. refined MDL**: two-part codes are the teaching version; normalized maximum likelihood is the principled version. Papers saying "MDL" may mean either.
+
+## Where To Go Next
+
+- Read [Kolmogorov Complexity](/kolmogorov-complexity) for the theoretical foundation of description length.
+- Read [MDL Weights](/mdl-weights) for Hinton's application of MDL to neural network regularization.
+- Read [VAE](/vae) to see description-length thinking (the KL term) inside a modern deep generative model.
+- Read [Variational Lossy Autoencoder](/variational-lossy-autoencoder) for a deeper look at what codes and latents actually capture.

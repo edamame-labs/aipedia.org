@@ -27,45 +27,63 @@ resources:
 
 import { AdamViz } from '../../components/viz/AdamViz';
 
-**Adam** (Adaptive Moment Estimation), introduced by Kingma and Ba in 2014, is the most widely used optimizer in deep learning. It combines the benefits of momentum and adaptive learning rates, requiring minimal tuning while working well across diverse problems.
+**Adam** (Adaptive Moment Estimation), introduced by Kingma and Ba in 2014, is the most widely used optimizer in deep learning. The core idea is simple: instead of using one fixed step size for every parameter, Adam watches how each parameter's gradient behaves over time and gives each parameter its own momentum-smoothed, adaptively-scaled update.
+
+> If gradients and training loops are new to you, read [Backpropagation](/backpropagation) first. Backprop computes the gradients; an optimizer like Adam decides how to use them to update the weights.
+
+## Why Students Should Care
+
+- Adam (or its variant AdamW) is the default optimizer in nearly every modern deep learning project, including Transformers and large language models.
+- It combines the benefits of momentum and adaptive learning rates, requiring minimal tuning while working well across diverse problems.
+- Understanding Adam explains a lot of practical training advice you will encounter: warmup schedules, weight decay choices, and optimizer memory costs.
 
 ## The Problem with Vanilla SGD
 
-Stochastic Gradient Descent faces challenges:
-- Same learning rate for all parameters (bad for sparse features)
-- Struggles with saddle points and ravines
-- Requires careful learning rate scheduling
+Plain Stochastic Gradient Descent takes the same size step for every parameter, scaled only by the raw gradient. That causes trouble:
+
+- Same learning rate for all parameters (bad for sparse features, where some parameters get gradients rarely)
+- Struggles with saddle points and ravines, where the loss surface is steep in one direction and flat in another
+- Requires careful learning rate scheduling by hand
 
 ## Adam's Solution
 
-Adam maintains two moving averages for each parameter:
+Think of Adam as answering two questions for each parameter, using running averages of its gradient history:
+
+- **Which direction have gradients been pointing lately?** (momentum)
+- **How large have gradients been lately?** (adaptive scaling)
+
+Concretely, Adam maintains two moving averages for each parameter:
 
 1. **First moment (momentum)**: $m_t = \beta_1 m_{t-1} + (1-\beta_1) g_t$
 2. **Second moment (adaptive LR)**: $v_t = \beta_2 v_{t-1} + (1-\beta_2) g_t^2$
 
-Then updates weights using:
+Then it updates the weights using:
 
 $$
 \theta_{t+1} = \theta_t - \frac{\alpha}{\sqrt{\hat{v}_t} + \epsilon} \hat{m}_t
 $$
 
+You do not need to memorize the equation. The important idea is: **step in the smoothed gradient direction ($\hat{m}_t$), but shrink the step for parameters whose gradients have been large ($\sqrt{\hat{v}_t}$ in the denominator).**
+
 ## Bias Correction
 
-Early in training, $m_t$ and $v_t$ are biased toward zero. Adam corrects this:
+There is one subtlety. The moving averages start at zero, so early in training $m_t$ and $v_t$ are biased toward zero — they underestimate the true averages. Adam corrects this:
 
 $$
 \hat{m}_t = \frac{m_t}{1 - \beta_1^t}, \quad \hat{v}_t = \frac{v_t}{1 - \beta_2^t}
 $$
 
-This correction is crucial for proper early training.
+This correction is crucial for proper early training. Without it, the first steps would be far too small (or, after dividing, badly mis-scaled).
 
 ## Interactive Demo
 
 Compare Adam with other optimizers on a loss landscape:
 
-<AdamViz client:load />
+<AdamViz client:visible />
 
 ## The Complete Algorithm
+
+The whole optimizer fits in a few lines:
 
 ```python
 def adam(params, grads, m, v, t, lr=0.001, beta1=0.9, beta2=0.999, eps=1e-8):
@@ -94,13 +112,13 @@ def adam(params, grads, m, v, t, lr=0.001, beta1=0.9, beta2=0.999, eps=1e-8):
 | $\beta_2$ | 0.999 | Second moment decay |
 | $\epsilon$ | 1e-8 | Numerical stability |
 
-These defaults work remarkably well across many problems.
+These defaults work remarkably well across many problems — which is a big part of why Adam became so popular.
 
 ## Why Adam Works
 
 ### Momentum ($\beta_1$)
 - Accumulates gradient direction over time
-- Smooths out noisy gradients
+- Smooths out noisy gradients (mini-batches give noisy estimates)
 - Helps escape shallow local minima
 
 ### Adaptive Learning Rate ($\beta_2$)
@@ -109,6 +127,8 @@ These defaults work remarkably well across many problems.
 - No manual learning rate scheduling needed
 
 ## Adam Variants
+
+Researchers have proposed many tweaks. The names come up often in papers and codebases:
 
 | Variant | Improvement |
 |---------|-------------|
@@ -121,13 +141,13 @@ These defaults work remarkably well across many problems.
 
 ## AdamW: The Modern Default
 
-Standard Adam's L2 regularization is coupled with gradient scaling, causing issues. AdamW decouples weight decay:
+The one variant you should actually know is **AdamW**. In standard Adam, L2 regularization gets mixed into the gradient and is therefore rescaled by the adaptive step sizes, which weakens it in unpredictable ways. AdamW decouples weight decay from the gradient update:
 
 $$
 \theta_{t+1} = \theta_t - \alpha \left( \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon} + \lambda \theta_t \right)
 $$
 
-AdamW is now the default for transformers and large language models.
+The takeaway: **weight decay is applied directly to the weights, not passed through the adaptive scaling.** AdamW is now the default for Transformers and large language models.
 
 ## Comparison with Other Optimizers
 
@@ -138,6 +158,8 @@ AdamW is now the default for transformers and large language models.
 | **Adam** | Yes | Yes | 3x | General purpose |
 | **AdamW** | Yes | Yes | 3x | Transformers, LLMs |
 
+The memory column matters: Adam stores two extra numbers ($m$ and $v$) for every parameter, so optimizer state can be twice the size of the model itself.
+
 ## When NOT to Use Adam
 
 1. **ImageNet training**: SGD with momentum often generalizes better
@@ -146,7 +168,7 @@ AdamW is now the default for transformers and large language models.
 
 ## Learning Rate Scheduling
 
-Even with Adam, learning rate schedules help:
+Adaptive steps do not remove the need for a schedule. Even with Adam, learning rate schedules help:
 
 - **Warmup**: Start low, increase gradually (critical for transformers)
 - **Cosine decay**: Smooth decrease to zero
@@ -159,3 +181,17 @@ Adam's impact:
 - Enabled training without extensive hyperparameter search
 - Made research more accessible (less tuning expertise needed)
 - Foundation for modern optimizer development
+
+## Common Confusion
+
+- **Adam vs. AdamW**: Adam is the original algorithm; AdamW changes only how weight decay is applied. When a modern paper says "Adam," it often means AdamW in the code.
+- **Adaptive learning rate does not mean "no learning rate."** You still choose $\alpha$; Adam only rescales it per parameter.
+- **Momentum here is not classical momentum.** Adam's $m_t$ is an exponential moving average of gradients, closely related to but not identical to SGD-with-momentum.
+- **Optimizer vs. loss function**: Adam does not change what you optimize (the loss), only how you take steps toward minimizing it.
+
+## Where To Go Next
+
+- Read [Backpropagation](/backpropagation) for where the gradients Adam consumes actually come from.
+- Read [Batch Normalization](/batch-normalization) and [Dropout](/dropout) for the other standard training tricks used alongside Adam.
+- Read [Transformer](/transformer) to see the architecture that made AdamW plus warmup the standard recipe.
+- Read [Scaling Laws](/scaling-laws) for how training choices play out at very large scale.

@@ -19,7 +19,16 @@ resources:
 
 import { RNNGeneratorViz } from '../../components/viz/RNNGeneratorViz';
 
-**The Unreasonable Effectiveness of Recurrent Neural Networks** is Andrej Karpathy's 2015 blog post that captivated the AI community by showing what simple RNNs could learn from raw text.
+**The Unreasonable Effectiveness of Recurrent Neural Networks** is Andrej Karpathy's 2015 blog post showing that a simple RNN, trained only to guess the next character in raw text, can learn spelling, syntax, code structure, and even style. It captivated the AI community and previewed the idea behind modern language models.
+
+> This page assumes you know roughly what an RNN is. If gates and hidden states are new to you, read [Understanding LSTMs](/understanding-lstms) first — Karpathy's actual models were LSTMs.
+
+## Why Students Should Care
+
+- This is the clearest early demonstration that **next-token prediction alone** produces rich language ability — the same objective that trains [GPT](/gpt) today.
+- It shows that neural networks can learn structure (grammar, brackets, markup) without anyone programming rules in.
+- The temperature-sampling trick introduced here is exactly the "temperature" knob you set when calling a modern LLM API.
+- It is a great first project: char-RNNs are small enough to train on a laptop.
 
 ## The Core Idea
 
@@ -29,22 +38,27 @@ $$
 P(x_{t+1} | x_1, x_2, ..., x_t)
 $$
 
-That's it. No parsing, no grammar rules, no structure—just characters. Yet the results are remarkable.
+That's it. No parsing, no grammar rules, no hand-built structure — just characters in, probabilities out. Yet the results are remarkable.
+
+A concrete picture: feed the model "hell" one letter at a time, and train it so that after "h" it predicts "e", after "he" it predicts "l", and so on. Do this over megabytes of text and the model is forced to internalize how the text is built.
 
 ## Character-Level Language Model
 
 At each timestep, the RNN:
+
 1. Takes a character as input
 2. Updates its hidden state: $h_t = \tanh(W_{hh}h_{t-1} + W_{xh}x_t)$
 3. Outputs a probability distribution over all characters: $P(x_{t+1}) = \text{softmax}(W_{hy}h_t)$
 
-During generation, sample from this distribution and feed it back as the next input.
+You do not need to memorize the equations. The important idea is: **the hidden state is a running summary of everything seen so far, and the output is a guess about what comes next**.
+
+During generation, sample a character from the output distribution and feed it back in as the next input. Repeat, and the model writes text one character at a time.
 
 ## Interactive Demo
 
 Watch an RNN generate text character by character:
 
-<RNNGeneratorViz client:load />
+<RNNGeneratorViz client:visible />
 
 ## What RNNs Learn
 
@@ -70,30 +84,53 @@ Karpathy trained char-RNNs on various datasets and found they learned:
 - Environment matching (begin/end)
 - Citation formats
 
+Notice the pattern: none of this structure was labeled. The model discovered it because predicting the next character *requires* it.
+
 ## Temperature Sampling
 
-The **temperature** parameter controls randomness:
+When generating, you can control how adventurous the sampling is with a **temperature** parameter $T$ that reshapes the output distribution:
 
 $$
 P(x_i) = \frac{\exp(z_i / T)}{\sum_j \exp(z_j / T)}
 $$
 
-- **T → 0**: Greedy, picks highest probability (repetitive)
-- **T = 1**: Standard sampling
-- **T > 1**: More random, creative but potentially incoherent
+- **T near 0**: nearly greedy — always picks the highest-probability character (safe but repetitive)
+- **T = 1**: standard sampling from the model's distribution
+- **T above 1**: flatter distribution — more random, creative but potentially incoherent
+
+The takeaway: low temperature sharpens the distribution, high temperature flattens it. This exact knob survives unchanged in today's LLM APIs.
 
 ## Hidden State Visualization
 
-Karpathy discovered individual neurons tracking specific features:
+Karpathy also looked *inside* the trained network and found individual neurons tracking specific, human-interpretable features:
+
 - One neuron activates inside quotes
 - Another tracks line length
 - Some detect URLs or code comments
 
+Nobody assigned these jobs — the neurons specialized on their own. This was an early glimpse of what we now call interpretability research.
+
 ## Why This Matters
 
 This post demonstrated that:
+
 1. Simple models can capture complex structure
-2. Raw prediction objective learns rich representations
+2. A raw prediction objective learns rich representations
 3. Neural networks discover interpretable features
 
-These insights presaged the success of GPT and modern language models.
+These insights presaged the success of [GPT](/gpt) and modern language models, which scale up the same recipe: predict the next token, on much more data, with a bigger model.
+
+## Common Confusion
+
+- **This is a blog post, not a paper**: it is famous for its demos and clarity, not for introducing a new architecture. The models are standard LSTMs.
+- **Character-level vs. token-level**: char-RNNs predict one character at a time; modern LLMs predict subword *tokens*. Same objective, different vocabulary.
+- **"Effectiveness" does not mean understanding**: the model imitates the statistics of its training text. Whether that constitutes understanding was — and remains — a live debate.
+- **RNN vs. LSTM here**: Karpathy says "RNN" throughout, but the strong results use LSTM cells; vanilla RNNs struggle with the longer-range structure.
+
+## Where To Go Next
+
+- Read [Understanding LSTMs](/understanding-lstms) for how the recurrent cell actually keeps memory.
+- Read [RNN Regularization](/rnn-regularization) for how these models were kept from overfitting.
+- Read [Seq2Seq](/seq2seq) for RNNs applied to translation with an encoder-decoder design.
+- Read [GPT](/gpt) to see next-token prediction scaled into a general-purpose language model.
+- Read [Scaling Laws](/scaling-laws) for what happens as you grow this recipe by orders of magnitude.

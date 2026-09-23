@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import '../../lib/motion';
+import { createRng } from '../../lib/rng';
 
 interface ParamDataPoint {
   params: number;
@@ -12,20 +14,22 @@ interface ComputeDataPoint {
 }
 
 const generateScalingData = (): ParamDataPoint[] => {
+  const random = createRng(15733);
   const data: ParamDataPoint[] = [];
   for (let i = 0; i < 20; i++) {
     const params = Math.pow(10, 6 + i * 0.4);
-    const loss = 10.5 * Math.pow(params, -0.076) + 0.1 * Math.random();
+    const loss = 10.5 * Math.pow(params, -0.076) + 0.1 * random();
     data.push({ params, loss });
   }
   return data;
 };
 
 const generateComputeData = (): ComputeDataPoint[] => {
+  const random = createRng(48091);
   const data: ComputeDataPoint[] = [];
   for (let i = 0; i < 20; i++) {
     const compute = Math.pow(10, 15 + i * 0.5);
-    const loss = 2.8 * Math.pow(compute, -0.050) + 0.05 * Math.random();
+    const loss = 2.8 * Math.pow(compute, -0.050) + 0.05 * random();
     data.push({ compute, loss });
   }
   return data;

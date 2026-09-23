@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import '../../lib/motion';
 
 export function MambaViz() {
   const [seqLength, setSeqLength] = useState(1000);

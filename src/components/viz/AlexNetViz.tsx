@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import '../../lib/motion';
+import { createRng } from '../../lib/rng';
 
 interface Layer {
   name: string;
@@ -30,12 +32,13 @@ const INNOVATIONS = [
 ];
 
 function generateFeatureMap(width: number, height: number, channels: number): number[][] {
+  const random = createRng(27124 + width * 31 + height);
   const map: number[][] = [];
   const scale = Math.min(width, height);
   for (let i = 0; i < Math.min(8, Math.ceil(Math.sqrt(channels))); i++) {
     const row: number[] = [];
     for (let j = 0; j < Math.min(8, Math.ceil(Math.sqrt(channels))); j++) {
-      row.push(Math.random() * 0.7 + 0.3);
+      row.push(random() * 0.7 + 0.3);
     }
     map.push(row);
   }

@@ -15,29 +15,40 @@ resources:
 
 import { DilatedConvViz } from '../../components/viz/DilatedConvViz';
 
-**Dilated convolutions** (also called atrous convolutions) expand the receptive field exponentially without increasing the number of parameters or reducing spatial resolution. This paper introduced them for dense prediction tasks like semantic segmentation.
+**Dilated convolutions** (also called atrous convolutions) are convolutions with gaps: the kernel samples the input at spaced-out intervals instead of adjacent pixels. This lets the receptive field grow exponentially without adding parameters or shrinking the image. This paper introduced them for dense prediction tasks like semantic segmentation.
+
+> If convolutions and receptive fields are new to you, read [CS231n](/cs231n) first.
+
+## Why Students Should Care
+
+- Dilated convolutions solve a tension you will hit in any dense prediction task: **seeing a lot of context without throwing away resolution**.
+- They became foundational far beyond vision — the same trick powers audio generation (WaveNet) and time-series models (TCNs).
+- The core idea — restructure the operation instead of adding parameters — is a recurring pattern in architecture design worth internalizing.
 
 ## The Problem
 
-Standard convolutions face a tradeoff:
-- **Pooling** increases receptive field but loses spatial resolution
-- **Larger kernels** increase receptive field but add parameters quadratically
+Suppose you want to label **every pixel** in an image ("this pixel is road, this one is sky"). To label a pixel correctly you need context — a wide view of the surroundings — but you also need to keep the output at full resolution, because every pixel gets its own answer.
 
-For dense prediction (assigning a label to every pixel), we need both large context and high resolution.
+Standard tools force a tradeoff:
+
+- **Pooling** increases the receptive field but loses spatial resolution — you literally shrink the image
+- **Larger kernels** increase the receptive field but add parameters quadratically
+
+For dense prediction we need both large context *and* high resolution. Dilated convolutions deliver both.
 
 ## Dilated Convolution
 
-A dilated convolution with dilation factor $d$ samples input at intervals:
+The trick: keep the same 3×3 kernel, but spread its taps apart. With dilation factor $d$, the kernel samples the input every $d$ pixels instead of every pixel:
 
 $$
 (F *_d k)(p) = \sum_{s+dt=p} F(s) \cdot k(t)
 $$
 
-A 3×3 kernel with dilation $d$ has a receptive field of $(2d+1) \times (2d+1)$ while using only 9 parameters.
+You do not need to memorize the formula. The important idea is: **a 3×3 kernel with dilation $d$ covers a $(2d+1) \times (2d+1)$ region while still using only 9 parameters** — same cost, wider view.
 
 ## Exponential Expansion
 
-By stacking layers with dilations $1, 2, 4, 8, ...$, the receptive field grows exponentially:
+The real power comes from stacking. Double the dilation at each layer ($1, 2, 4, 8, ...$) and the receptive field grows exponentially:
 
 | Layer | Dilation | Receptive Field |
 |-------|----------|-----------------|
@@ -46,33 +57,47 @@ By stacking layers with dilations $1, 2, 4, 8, ...$, the receptive field grows e
 | 3 | 4 | 15×15 |
 | 4 | 8 | 31×31 |
 
-After $L$ layers: $(2^{L+1} - 1) \times (2^{L+1} - 1)$ receptive field.
+After $L$ layers, the receptive field is $(2^{L+1} - 1) \times (2^{L+1} - 1)$. A handful of cheap layers can see the whole image — with no pooling and no downsampling anywhere.
 
 ## Interactive Demo
 
 Visualize how different dilation rates expand the receptive field:
 
-<DilatedConvViz client:load />
+<DilatedConvViz client:visible />
 
 ## Context Module
 
-The paper proposes a multi-scale context aggregation module:
+The paper also proposes a multi-scale context aggregation module:
 
 $$
 \text{Context}(x) = \sum_{i=1}^{n} \text{DilatedConv}_{d_i}(x)
 $$
 
-Multiple parallel dilated convolutions capture information at different scales, which are then combined for the final prediction.
+In plain English: run several dilated convolutions in parallel, each with a different dilation rate, so each one sees the image at a different scale. Combining them gives the final prediction access to fine detail and broad context at once.
 
 ## Key Properties
 
-- **No resolution loss**: Unlike pooling, dilated convolutions maintain spatial dimensions
-- **Parameter efficient**: Same number of weights as standard convolution
-- **Flexible**: Dilation rate can be adjusted per layer or learned
+- **No resolution loss**: unlike pooling, dilated convolutions maintain spatial dimensions
+- **Parameter efficient**: same number of weights as a standard convolution
+- **Flexible**: the dilation rate can be adjusted per layer or learned
 
 ## Applications
 
 Dilated convolutions became foundational for:
+
 - **Semantic segmentation** (DeepLab, PSPNet)
 - **Audio generation** (WaveNet)
-- **Time series** (TCN - Temporal Convolutional Networks)
+- **Time series** (TCN — Temporal Convolutional Networks)
+
+## Common Confusion
+
+- **"Dilated" and "atrous" are the same thing.** "Atrous" comes from the French *à trous* ("with holes"); papers use the terms interchangeably.
+- **Dilation is not stride.** Stride skips *output* positions, shrinking the output. Dilation spreads the *kernel's* taps apart while producing an output at every position — resolution is preserved.
+- **Dilation is not pooling.** Both enlarge the receptive field, but pooling downsamples the feature map; dilated convolutions do not.
+
+## Where To Go Next
+
+- Read [CS231n](/cs231n) for the fundamentals of convolutions and receptive fields
+- Read [ResNet](/resnet) for the backbone architectures these modules often plug into
+- Read [AlexNet](/alexnet) for where the deep CNN story began
+- Read [Deep Speech 2](/deep-speech-2) for another take on convolutional models beyond images

@@ -23,7 +23,21 @@ resources:
 
 import { VAEViz } from '../../components/viz/VAEViz';
 
-A **Variational Autoencoder (VAE)** is a generative model that learns a *distribution* over latent variables, enabling smooth interpolation, sampling, and principled uncertainty.
+A **Variational Autoencoder (VAE)** is a generative model that learns a *distribution* over latent variables rather than a single compressed code, enabling smooth interpolation, sampling of new data, and principled uncertainty.
+
+> This page introduces the VAE from scratch. Once it makes sense, read [Variational Lossy Autoencoder](/variational-lossy-autoencoder) for a second pass that explains what the VAE objective *means* in terms of compression.
+
+## Why Students Should Care
+
+- VAEs form the foundation of many modern generative models, including the latent spaces used by [latent diffusion](/latent-diffusion) (the architecture behind Stable Diffusion).
+- Two of its tools — the **ELBO** and the **reparameterization trick** — appear all over machine learning, far beyond VAEs.
+- It is the cleanest example of combining deep learning with probabilistic modeling: you get a generative model you can both *sample from* and *reason about*.
+
+## The Problem VAEs Solve
+
+Start with a plain autoencoder: a network that compresses an input (say, a face image) down to a short vector, then reconstructs it. This works for compression, but fails as a *generator*. If you pick a random vector and decode it, you usually get garbage — the latent space has "holes," because the model was never told how codes should be arranged.
+
+The VAE fixes this by making the latent space *probabilistic and organized*: every input maps to a small cloud of codes rather than a single point, and all the clouds are nudged toward a standard shape. The result is a latent space where random samples decode to coherent outputs.
 
 ## Core Idea
 
@@ -33,7 +47,7 @@ $$
 q_\phi(z|x) = \mathcal{N}(z; \mu(x), \sigma^2(x))
 $$
 
-Sampling from this distribution allows the model to generate diverse yet coherent outputs.
+In plain English: the encoder outputs a *mean* and a *spread* for each input, defining a Gaussian over possible codes. Sampling from this distribution allows the model to generate diverse yet coherent outputs.
 
 ## Evidence Lower Bound (ELBO)
 
@@ -43,26 +57,30 @@ $$
 \mathcal{L}(x) = \mathbb{E}_{q(z|x)}[\log p_\theta(x|z)] - D_{KL}(q(z|x) \| p(z))
 $$
 
-- **Reconstruction term**: encourages accurate decoding of samples
-- **KL divergence**: regularizes the posterior toward the prior p(z) = N(0,I), shaping a smooth latent space
+The two terms make a deal:
 
-This tradeoff balances fidelity and generalization.
+- **Reconstruction term** (first): encourages accurate decoding of samples — "when you encode x and decode it, you should get x back."
+- **KL divergence** (second): regularizes the posterior toward the prior p(z) = N(0,I) — "keep your codes close to a standard Gaussian, so the latent space stays smooth."
+
+You do not need to memorize the equation. The important idea is: **the VAE trades off reconstruction fidelity against keeping the latent space simple enough to sample from**. This tradeoff balances fidelity and generalization.
 
 ## Reparameterization Trick
 
-Directly sampling z from q(z|x) blocks gradients. The solution is to rewrite sampling as:
+There is one technical obstacle: training requires gradients, but "sample z from q(z|x)" is a random operation, and you cannot backpropagate through a random draw. Directly sampling z from q(z|x) blocks gradients.
+
+The solution is to rewrite sampling as:
 
 $$
 z = \mu + \sigma \cdot \epsilon, \quad \epsilon \sim \mathcal{N}(0, 1)
 $$
 
-Randomness is isolated in ε, allowing gradients to flow through μ and σ.
+Randomness is isolated in ε (a fixed noise source with no parameters), allowing gradients to flow through μ and σ. This one-line trick is what makes VAEs trainable end to end, and it reappears throughout deep learning whenever someone needs gradients through sampling.
 
 ## Interactive Visualization
 
 Explore how VAEs encode distributions, sample latents, interpolate, and decode:
 
-<VAEViz client:load />
+<VAEViz client:visible />
 
 ## VAE vs. Autoencoder
 
@@ -80,4 +98,16 @@ Explore how VAEs encode distributions, sample latents, interpolate, and decode:
 - **Conditional VAE** – generation conditioned on labels
 - **Hierarchical VAE** – multi-level latent variables
 
-VAEs form the foundation of many modern generative models, including diffusion model latents and learned priors.
+## Common Confusion
+
+- **"Variational" refers to variational inference** (approximating an intractable posterior with a learnable one), not to variety in the outputs.
+- **The KL term is not just generic regularization** like weight decay — it specifically shapes the latent space to match the prior, which is what makes sampling work. See [Variational Lossy Autoencoder](/variational-lossy-autoencoder) for the deeper compression view.
+- **VAE vs. [GAN](/gan)**: a VAE has an encoder and an explicit training objective (the ELBO); a GAN has neither, and instead learns through an adversarial game. VAE samples tend to be blurrier but training is far more stable.
+- **A VAE is a model plus a training objective**, not just an architecture — the encoder/decoder networks can be MLPs, CNNs, or anything differentiable.
+
+## Where To Go Next
+
+- Read [Variational Lossy Autoencoder](/variational-lossy-autoencoder) for the rate-distortion interpretation of the ELBO and posterior collapse.
+- Read [GAN](/gan) for the adversarial alternative to likelihood-based generation.
+- Read [Diffusion Models](/diffusion-models) for the generative approach that now leads image synthesis.
+- Read [Latent Diffusion](/latent-diffusion) to see a VAE used as the compression stage of Stable Diffusion.

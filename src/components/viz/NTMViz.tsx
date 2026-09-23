@@ -1,17 +1,21 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import '../../lib/motion';
+import { createRng } from '../../lib/rng';
 
 const MEMORY_SIZE = 8;
 const MEMORY_WIDTH = 6;
 
 function generateMemory(): number[][] {
+  const random = createRng(70311);
   return Array.from({ length: MEMORY_SIZE }, () =>
-    Array.from({ length: MEMORY_WIDTH }, () => Math.random())
+    Array.from({ length: MEMORY_WIDTH }, () => random())
   );
 }
 
-function generateWeights(): number[] {
-  const weights = Array.from({ length: MEMORY_SIZE }, () => Math.random());
+function generateWeights(seed: number): number[] {
+  const random = createRng(seed);
+  const weights = Array.from({ length: MEMORY_SIZE }, () => random());
   const sum = weights.reduce((a, b) => a + b, 0);
   return weights.map(w => w / sum);
 }
@@ -21,8 +25,8 @@ export function NTMViz() {
   const [step, setStep] = useState(0);
 
   const memory = useMemo(() => generateMemory(), []);
-  const readWeights = useMemo(() => generateWeights(), []);
-  const writeWeights = useMemo(() => generateWeights(), []);
+  const readWeights = useMemo(() => generateWeights(24007), []);
+  const writeWeights = useMemo(() => generateWeights(61553), []);
 
   const weights = operation === 'read' ? readWeights : writeWeights;
   const focusedRow = weights.indexOf(Math.max(...weights));

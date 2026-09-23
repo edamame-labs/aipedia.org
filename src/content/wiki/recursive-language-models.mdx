@@ -23,52 +23,62 @@ resources:
 
 import { RLMViz } from '../../components/viz/RLMViz';
 
-**Recursive Language Models** (RLMs) are a general inference paradigm that enables language models to process contexts far beyond their native window by treating the input as an external environment rather than consuming it directly.
+**Recursive Language Models** (RLMs) are an inference strategy that lets a language model handle inputs far longer than its context window. Instead of stuffing the whole input into the prompt, the model treats the input as an external environment it can search, slice, and — crucially — hand pieces of to *copies of itself*.
 
-## Motivation
+> This page assumes you know what a context window is. If not, read [GPT](/gpt) and [In-Context Learning](/in-context-learning) first.
 
-Standard language models suffer from **context rot**—performance degrades as input length approaches or exceeds the context window. Even models with 128K+ token windows struggle with:
+## Why Students Should Care
+
+- Context windows are a hard limit of today's models; RLMs show a way around the limit without retraining anything.
+- The core trick — recursion — is one you already know from intro CS, applied to LLMs.
+- It is a clean example of the shift from "model as text predictor" to "model as agent that writes code and calls tools."
+
+## The Problem: Context Rot
+
+Standard language models suffer from **context rot** — performance degrades as input length approaches or exceeds the context window. Even models with 128K+ token windows struggle with:
 
 - Retrieval accuracy in long documents
 - Multi-hop reasoning across distant passages
 - Maintaining coherence over extended contexts
 
-RLMs address this by fundamentally changing how models interact with their input.
+So simply buying a bigger window does not solve the problem. RLMs address it by changing how the model *interacts* with its input.
 
 ## Core Insight
 
 Instead of:
+
 ```python
 # Traditional: context IN the prompt
 response = llm.completion(f"{huge_context}\n\nQuestion: {query}")
 ```
 
 RLMs do:
+
 ```python
 # RLM: context AS a variable in an environment
 repl.set_variable("context", huge_context)
 response = rlm.completion(query)  # Model writes code to explore context
 ```
 
-The context becomes an **environment variable** in a REPL that the model can programmatically query, slice, search, and recursively process.
+The context becomes an **environment variable** in a REPL (an interactive code environment) that the model can programmatically query, slice, search, and recursively process. The model never reads the whole input — it writes code that reads the parts it needs.
 
 ## How It Works
 
-1. **Load context into REPL**: The full input is stored as a string variable in a Python environment
-2. **System prompt**: The root model receives instructions on how to interact with the environment
-3. **Programmatic access**: The model can read slices, write helper functions, and spawn sub-LLM calls
-4. **Recursive decomposition**: Complex queries trigger recursive calls on smaller chunks
-5. **Result combination**: Answers bubble up and combine into the final response
+1. **Load context into REPL**: the full input is stored as a string variable in a Python environment
+2. **System prompt**: the root model receives instructions on how to interact with the environment
+3. **Programmatic access**: the model can read slices, write helper functions, and spawn sub-LLM calls
+4. **Recursive decomposition**: complex queries trigger recursive calls on smaller chunks
+5. **Result combination**: answers bubble up and combine into the final response
 
 ## Interactive Demo
 
 Explore how RLMs decompose problems and search through massive contexts:
 
-<RLMViz client:load />
+<RLMViz client:visible />
 
 ## Example: Needle in a Haystack
 
-Finding a specific fact in 10M tokens:
+Concretely — say you need to find one specific fact buried in 10M tokens of text.
 
 **Traditional LLM approach**:
 - Load all 10M tokens into context
@@ -76,6 +86,7 @@ Finding a specific fact in 10M tokens:
 - Fails due to context window limits
 
 **RLM approach**:
+
 ```python
 def find_needle(context_var, query):
     # Split into chunks
@@ -92,7 +103,7 @@ def find_needle(context_var, query):
     return rlm.call(f"Extract answer from: {context_var}")
 ```
 
-Complexity: $O(\log N)$ — exponentially faster than linear scan.
+Complexity: $O(\log N)$ — exponentially faster than a linear scan. The takeaway: **divide-and-conquer works for reading, not just for sorting.**
 
 ## Architecture
 
@@ -116,6 +127,7 @@ From the paper's benchmarks:
 | Long Document Summarization | 45% | 82% | +37% |
 
 Key findings:
+
 - Processes inputs **100x beyond context windows**
 - **No degradation** at 10M+ tokens
 - **RLM-Qwen3-8B** outperforms base model by 28.3% on average
@@ -148,7 +160,7 @@ print(result.response)
 
 ## Why "Recursive"?
 
-The model **calls itself** on sub-problems—the classic definition of recursion:
+The model **calls itself** on sub-problems — the classic definition of recursion:
 
 ```
 rlm(query, full_context)
@@ -163,13 +175,26 @@ Each sub-call can spawn its own sub-calls until reaching a base case small enoug
 
 ## Limitations
 
-- **Latency overhead**: Synchronous sub-calls increase end-to-end time
-- **Simple tasks**: Overkill for short contexts where direct inference is faster
-- **Cost**: Multiple LLM calls per query
-- **Complexity**: Requires REPL environment setup
+- **Latency overhead**: synchronous sub-calls increase end-to-end time
+- **Simple tasks**: overkill for short contexts where direct inference is faster
+- **Cost**: multiple LLM calls per query
+- **Complexity**: requires REPL environment setup
 
 ## Future Directions
 
-- **Asynchronous sub-calls**: Parallel recursive queries
-- **Native training**: Models trained end-to-end for recursive reasoning
-- **Long-horizon agents**: Tasks spanning weeks with persistent context management
+- **Asynchronous sub-calls**: parallel recursive queries
+- **Native training**: models trained end-to-end for recursive reasoning
+- **Long-horizon agents**: tasks spanning weeks with persistent context management
+
+## Common Confusion
+
+- **RLMs vs. long-context models**: a long-context model reads more tokens in one forward pass; an RLM keeps the model's window small and *navigates* a large input with code. They attack the same problem from opposite directions.
+- **RLMs vs. RAG (retrieval-augmented generation)**: RAG retrieves chunks with a separate search index chosen ahead of time; an RLM decides *at inference time*, in code it writes itself, which parts of the input to read and can recurse on them.
+- **"Recursive" does not mean recurrent**: this has nothing to do with recurrent neural networks. The recursion is at the level of whole model calls, not hidden states.
+
+## Where To Go Next
+
+- Read [In-Context Learning](/in-context-learning) to understand what a model can do with the context it *does* see.
+- Read [Chain-of-Thought](/chain-of-thought) — RLMs extend the same "spend more compute by generating more steps" idea to code and sub-calls.
+- Read [Transformer](/transformer) to see why attention cost and context limits exist in the first place.
+- Read [Scaling Laws](/scaling-laws) for the background on model capability vs. compute.

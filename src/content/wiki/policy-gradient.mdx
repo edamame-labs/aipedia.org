@@ -27,41 +27,57 @@ resources:
 
 import { PolicyGradientViz } from '../../components/viz/PolicyGradientViz';
 
-**Policy Gradient Methods** directly optimize the policy $\pi_\theta(a|s)$ by computing gradients of the expected return. Unlike value-based methods, they naturally handle continuous actions and stochastic policies.
+**Policy Gradient Methods** learn a behavior directly: the policy $\pi_\theta(a|s)$ is a neural network, and we adjust its weights by gradient ascent so that actions leading to high reward become more likely. Unlike value-based methods such as [DQN](/dqn), they naturally handle continuous actions and stochastic policies.
+
+> If "policy", "return", or "state" are unfamiliar, read [Reinforcement Learning](/reinforcement-learning) first. This page is the foundation for [PPO](/ppo).
+
+## Why Students Should Care
+
+- Policy gradients are the second great family of RL algorithms (the other being value-based methods), and the family that modern practice mostly lives in.
+- [PPO](/ppo) — and through it, [RLHF](/rlhf) for language models — is a direct descendant of the ideas on this page.
+- The log-derivative trick used here is a general tool for optimizing through sampling, useful well beyond RL.
+
+## The Idea in Plain English
+
+Think of a coach reviewing game footage. After each game, the coach's advice is simple: **"Whatever you did in the games we won — do more of that. Whatever you did in the games we lost — do less of it."**
+
+That is the entire policy gradient recipe. Play with the current policy, look at the total reward, and nudge the policy's parameters so that high-reward actions get higher probability.
 
 ## The Objective
 
-Maximize expected return:
+Formally, we want the policy parameters $\theta$ that maximize expected return:
 
 $$
 J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta}\left[\sum_{t=0}^{T} \gamma^t r_t\right]
 $$
 
-We need $\nabla_\theta J(\theta)$ to do gradient ascent.
+To improve $\theta$ by gradient ascent, we need $\nabla_\theta J(\theta)$. The catch: the expectation is over trajectories $\tau$ produced by the environment, whose dynamics we usually cannot differentiate through — or even know.
 
 ## The Policy Gradient Theorem
 
-The key result that makes this tractable:
+The key result that makes this tractable anyway:
 
 $$
 \nabla_\theta J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta}\left[\sum_{t=0}^{T} \nabla_\theta \log \pi_\theta(a_t|s_t) \cdot R_t\right]
 $$
 
-where $R_t = \sum_{t'=t}^{T} \gamma^{t'-t} r_{t'}$ is the return from step $t$.
+where $R_t = \sum_{t'=t}^{T} \gamma^{t'-t} r_{t'}$ is the return from step $t$ onward.
+
+You do not need to memorize the equation. The important idea is: **for each action taken, push up its log-probability in proportion to how much reward followed it.** Actions followed by big rewards get strongly reinforced; actions followed by nothing get left alone.
 
 ## Why Log Probability?
 
-The "log-derivative trick":
+The formula comes from the "log-derivative trick":
 
 $$
 \nabla_\theta \pi_\theta(a|s) = \pi_\theta(a|s) \nabla_\theta \log \pi_\theta(a|s)
 $$
 
-This lets us estimate gradients through sampling without knowing environment dynamics.
+This identity rewrites the gradient of an expectation as an expectation of gradients — something we can estimate just by sampling actions and observing rewards. Crucially, the environment's dynamics never appear in the formula, so we never need to know or model them.
 
 ## REINFORCE Algorithm
 
-The simplest policy gradient:
+The simplest policy gradient method turns the theorem directly into code:
 
 ```python
 for episode in episodes:
@@ -77,40 +93,47 @@ for episode in episodes:
     optimizer.step()
 ```
 
+Note the minus sign: optimizers minimize, so we minimize the *negative* of the objective.
+
 ## Interactive Visualization
 
 Watch how policy gradients update a simple policy:
 
-<PolicyGradientViz client:load />
+<PolicyGradientViz client:visible />
 
 ## High Variance Problem
 
-REINFORCE has high variance because:
-1. Returns vary widely across episodes
-2. Credit assignment is imprecise (which action caused the reward?)
+REINFORCE works, but its gradient estimates are extremely noisy:
+
+1. Returns vary widely across episodes — one lucky episode can swing the update
+2. Credit assignment is imprecise: *every* action in a good episode gets reinforced, including the bad ones (which action actually caused the reward?)
+
+High variance means you need many samples and small learning rates, which makes plain REINFORCE slow in practice.
 
 ## Variance Reduction: Baselines
 
-Subtract a baseline $b(s)$ from returns:
+A simple fix: judge each return against a **baseline** $b(s)$ — a running estimate of "how well things usually go from here" — and reinforce only the *difference*:
 
 $$
 \nabla_\theta J(\theta) = \mathbb{E}\left[\nabla_\theta \log \pi_\theta(a_t|s_t) \cdot (R_t - b(s_t))\right]
 $$
 
-This doesn't change the expected gradient but reduces variance. Common choice: $b(s) = V(s)$.
+Subtracting a baseline does not change the expected gradient (it is still unbiased), but it can shrink the variance a lot. The most common choice is the state value: $b(s) = V(s)$.
+
+Intuition: instead of "you got 100 points, do more of that", the update becomes "you got 100 points when 90 was typical — do slightly more of that."
 
 ## Actor-Critic Methods
 
-Use a learned value function as baseline:
+Take the baseline idea one step further and *learn* the value function with a second network:
 
-- **Actor**: Policy $\pi_\theta(a|s)$
-- **Critic**: Value function $V_\phi(s)$
+- **Actor**: the policy $\pi_\theta(a|s)$ — decides what to do
+- **Critic**: the value function $V_\phi(s)$ — estimates how good each state is
 
 $$
 \nabla_\theta J(\theta) \approx \nabla_\theta \log \pi_\theta(a_t|s_t) \cdot (r_t + \gamma V_\phi(s_{t+1}) - V_\phi(s_t))
 $$
 
-The advantage $A_t = r_t + \gamma V(s_{t+1}) - V(s_t)$ tells us if the action was better or worse than average.
+The term in parentheses is the **advantage** $A_t = r_t + \gamma V(s_{t+1}) - V(s_t)$: it tells us whether the action turned out better or worse than the critic expected. Positive advantage → do it more; negative → do it less.
 
 ## Key Algorithms
 
@@ -124,13 +147,27 @@ The advantage $A_t = r_t + \gamma V(s_{t+1}) - V(s_t)$ tells us if the action wa
 
 ## Advantages of Policy Gradients
 
-1. **Continuous actions**: Natural parameterization
-2. **Stochastic policies**: Better exploration
-3. **Direct optimization**: Optimize what you care about
-4. **Convergence**: Guaranteed to local optimum
+1. **Continuous actions**: Natural parameterization — no need to enumerate actions and take a max
+2. **Stochastic policies**: Better exploration comes built in
+3. **Direct optimization**: Optimize what you care about (return), not a proxy
+4. **Convergence**: Guaranteed to reach a local optimum
 
 ## When to Use
 
-- Continuous action spaces
+- Continuous action spaces (robot joints, steering angles)
 - When you need stochastic policies
 - When state representation is rich enough
+
+## Common Confusion
+
+- **Policy gradient vs. value-based**: policy gradient methods learn the policy directly; value-based methods like [DQN](/dqn) learn action values and derive the policy by taking the best-scoring action.
+- **REINFORCE vs. policy gradient**: REINFORCE is the simplest *member* of the policy gradient family, not a synonym for it.
+- **Baseline vs. critic**: a baseline is any comparison value subtracted from the return; a critic is a *learned* baseline (and its use defines actor-critic methods).
+- **Return $R_t$ vs. advantage $A_t$**: the return is raw accumulated reward; the advantage is the return relative to what was expected. Modern methods almost always use advantages.
+
+## Where To Go Next
+
+- Read [PPO](/ppo) for the refinement of these ideas that dominates modern practice.
+- Read [DQN](/dqn) for the contrasting value-based family.
+- Read [RLHF](/rlhf) to see policy optimization applied to language models.
+- Read [Reinforcement Learning](/reinforcement-learning) for the MDP framing underneath it all.

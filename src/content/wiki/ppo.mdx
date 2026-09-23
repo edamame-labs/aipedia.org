@@ -31,15 +31,24 @@ resources:
 
 import { PPOViz } from '../../components/viz/PPOViz';
 
-**Proximal Policy Optimization (PPO)** is the most widely used deep reinforcement learning algorithm. It achieves strong performance while being simpler and more stable than prior methods like TRPO.
+**Proximal Policy Optimization (PPO)** is the most widely used deep reinforcement learning algorithm. Its core idea is simple: improve the policy a little at a time, and clip any update that would change it too much. That one trick makes it stronger, simpler, and more stable than prior methods like TRPO.
 
-## The Challenge
+> This page assumes you know what a policy gradient is. If not, read [Policy Gradient](/policy-gradient) first, and [Reinforcement Learning](/reinforcement-learning) before that.
 
-Policy gradient methods can be unstable:
-- Too large an update → policy collapses
-- Too small an update → slow learning
+## Why Students Should Care
 
-PPO solves this with a clipped objective that limits update size.
+- PPO is the default algorithm in most RL libraries and papers — if a project "uses RL", it probably uses PPO.
+- It is the classic optimizer behind [RLHF](/rlhf), the technique used to align chat assistants.
+- The clipping idea is a clean example of a broader lesson: in deep learning, *how big your update steps are* matters as much as their direction.
+
+## The Problem, in Plain English
+
+Policy gradient methods learn by nudging the policy toward actions that worked. The trouble is choosing the nudge size:
+
+- Too large an update → the policy can collapse, and because the policy also *collects the data*, bad updates poison future learning
+- Too small an update → learning crawls
+
+Earlier fixes (like TRPO) enforced a "trust region" with heavy math. PPO gets a similar effect with one clipped objective you can implement in a few lines.
 
 ## The PPO-Clip Objective
 
@@ -48,13 +57,16 @@ L^{CLIP}(\theta) = \mathbb{E}_t \left[ \min\left( r_t(\theta) \hat{A}_t, \text{c
 $$
 
 where:
-- $r_t(\theta) = \frac{\pi_\theta(a_t|s_t)}{\pi_{\theta_{old}}(a_t|s_t)}$ is the probability ratio
-- $\hat{A}_t$ is the advantage estimate
+
+- $r_t(\theta) = \frac{\pi_\theta(a_t|s_t)}{\pi_{\theta_{old}}(a_t|s_t)}$ is the **probability ratio**: how much more (or less) likely the new policy is to take the action than the old policy was
+- $\hat{A}_t$ is the **advantage** estimate: was this action better or worse than average?
 - $\epsilon$ is the clip range (typically 0.1-0.2)
+
+You do not need to memorize the formula. The important idea is: **increase the probability of good actions and decrease the probability of bad ones, but never let a single update shift any action's probability by more than a factor of about $1 \pm \epsilon$.**
 
 ## How Clipping Works
 
-The clip function limits how much the ratio can change:
+The clip function pins the ratio to a narrow band around 1:
 
 $$
 \text{clip}(r, 1-\epsilon, 1+\epsilon) = \begin{cases}
@@ -64,27 +76,30 @@ r & \text{if } 1-\epsilon \leq r \leq 1+\epsilon \\
 \end{cases}
 $$
 
-Taking the minimum ensures:
-- If $\hat{A} > 0$: Don't increase $r$ beyond $1+\epsilon$
-- If $\hat{A} < 0$: Don't decrease $r$ below $1-\epsilon$
+Taking the minimum of the clipped and unclipped terms makes the constraint one-sided in exactly the right way:
+
+- If $\hat{A} > 0$ (the action was good): don't increase $r$ beyond $1+\epsilon$ — no runaway enthusiasm
+- If $\hat{A} < 0$ (the action was bad): don't decrease $r$ below $1-\epsilon$ — no panic abandonment
+
+Once the ratio leaves the band, the gradient through that sample becomes zero, so the optimizer simply stops pushing in that direction.
 
 ## Interactive Visualization
 
 See how the clipping mechanism constrains policy updates:
 
-<PPOViz client:load />
+<PPOViz client:visible />
 
 ## Advantage Estimation
 
-PPO typically uses **Generalized Advantage Estimation (GAE)**:
+PPO needs to know whether each action was better than expected. It typically uses **Generalized Advantage Estimation (GAE)**, which blends short-horizon and long-horizon estimates:
 
 $$
 \hat{A}_t = \sum_{l=0}^{\infty} (\gamma \lambda)^l \delta_{t+l}
 $$
 
-where $\delta_t = r_t + \gamma V(s_{t+1}) - V(s_t)$ is the TD error.
+where $\delta_t = r_t + \gamma V(s_{t+1}) - V(s_t)$ is the TD error — the one-step "surprise" relative to the value function's prediction.
 
-The $\lambda$ parameter trades off bias vs variance.
+The $\lambda$ parameter trades off bias vs variance: small $\lambda$ trusts the value function more (lower variance, more bias), large $\lambda$ trusts observed rewards more.
 
 ## Full Algorithm
 
@@ -103,6 +118,8 @@ for iteration in range(num_iterations):
             loss = ppo_clip_loss(batch, advantages)
             optimizer.step(loss)
 ```
+
+Note the inner loop: PPO reuses each batch of experience for **several epochs** of gradient updates. That is exactly what clipping makes safe — without it, repeated updates on the same data would push the policy too far from the one that collected it.
 
 ## Hyperparameters
 
@@ -125,7 +142,22 @@ for iteration in range(num_iterations):
 ## Applications
 
 PPO powers:
-- **RLHF**: Aligning language models (ChatGPT, Claude)
+
+- **RLHF**: Aligning language models (ChatGPT, Claude) — see [RLHF](/rlhf)
 - **Game AI**: OpenAI Five, DOTA 2
 - **Robotics**: Manipulation, locomotion
 - **Autonomous driving**: Decision making
+
+## Common Confusion
+
+- **PPO vs. policy gradient**: PPO *is* a policy gradient method. The clipped objective is a safer stand-in for the vanilla policy gradient loss — see [Policy Gradient](/policy-gradient) for the base method.
+- **PPO vs. TRPO**: both limit how far the policy moves per update. TRPO enforces a hard KL-divergence constraint with second-order optimization; PPO approximates the same effect with first-order clipping.
+- **Clipping rewards vs. clipping the ratio**: PPO clips the *probability ratio* between new and old policies, not the rewards themselves.
+- **PPO vs. [DQN](/dqn)**: PPO learns a policy directly (policy-based); DQN learns action values and derives the policy from them (value-based).
+
+## Where To Go Next
+
+- Read [Policy Gradient](/policy-gradient) for the foundation PPO is built on, including REINFORCE and actor-critic.
+- Read [RLHF](/rlhf) to see PPO's most famous application: fine-tuning language models from human preferences.
+- Read [DQN](/dqn) for the contrasting value-based approach.
+- Read [Reinforcement Learning](/reinforcement-learning) if you want the full MDP background.

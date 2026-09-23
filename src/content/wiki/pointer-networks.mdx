@@ -15,21 +15,31 @@ resources:
 
 import { PointerNetViz } from '../../components/viz/PointerNetViz';
 
-**Pointer Networks** solve a fundamental limitation of sequence-to-sequence models: they can only output from a fixed vocabulary. Pointer Networks instead output *pointers* to input positions, enabling tasks where output size depends on input.
+**Pointer Networks** fix a blind spot in sequence-to-sequence models: a standard seq2seq model can only output words from a fixed, pre-decided vocabulary. A Pointer Network instead outputs *pointers back into its own input* — "the answer is element 3, then element 7, then element 1" — so the set of possible outputs grows and shrinks with the input.
 
-## The Problem
+> This page builds on [Seq2Seq](/seq2seq) and [Bahdanau Attention](/bahdanau-attention). If either is unfamiliar, read those first.
 
-Standard seq2seq models produce outputs from a fixed dictionary:
+## Why Students Should Care
+
+- Pointer Networks introduced the idea of **attention as output**, not just as an internal routing mechanism — a small twist with a long legacy.
+- They are the standard tool when a neural network must *select* items from its input: copying rare words, choosing spans, ordering elements.
+- Their "copy from the input" idea lives on in summarization models, extractive QA, and the copy mechanisms inside modern text generators.
+
+## The Problem, Concretely
+
+Suppose you want a neural network to compute the **convex hull** of a set of points: given 10 points, output the ones on the outer boundary, in order. Now give it 50 points. The "vocabulary" of possible answers just changed — it is the input points themselves, and there are 50 of them now instead of 10.
+
+A standard seq2seq model produces outputs from a fixed dictionary:
 
 $$
 P(y_i | y_1, ..., y_{i-1}, x) = \text{softmax}(W \cdot h_i)
 $$
 
-But what if the output should reference input positions? For convex hull, the output is indices into the input—vocabulary size equals input size.
+The matrix $W$ has one row per vocabulary item, fixed at training time. There is no way for this output layer to say "point number 37" when the model was built for at most 10 points. For convex hull, the output is indices into the input — vocabulary size equals input size, and that changes every example.
 
 ## The Pointer Mechanism
 
-Instead of projecting to a fixed vocabulary, use **attention over inputs as the output**:
+The fix is elegant: you already have a mechanism that scores every input position at every decoding step — **attention**. Instead of using attention to build a context vector and then predicting from a fixed vocabulary, use the attention weights themselves *as the output distribution*:
 
 $$
 u_j^i = v^T \tanh(W_1 e_j + W_2 d_i)
@@ -39,7 +49,9 @@ $$
 P(y_i | y_1, ..., y_{i-1}, x) = \text{softmax}(u^i)
 $$
 
-The attention weights $\alpha_{ij}$ directly become the output probability over input positions.
+Here $u_j^i$ is a score for "how much should output step $i$ point at input position $j$". Softmax over these scores gives a probability distribution over input positions — the attention weights $\alpha_{ij}$ directly become the output probabilities.
+
+The takeaway: **a Pointer Network is a seq2seq model whose output layer is an attention mechanism over the input.** Nothing else changes.
 
 ## Architecture
 
@@ -51,9 +63,11 @@ The attention weights $\alpha_{ij}$ directly become the output probability over 
 
 Watch a Pointer Network solve convex hull by pointing to input coordinates:
 
-<PointerNetViz client:load />
+<PointerNetViz client:visible />
 
 ## Applications
+
+All of these share the same shape: the answer is a selection or ordering of the input elements.
 
 ### Convex Hull
 
@@ -81,24 +95,43 @@ Learn to sort sequences by outputting indices in sorted order.
 
 ## Key Equations
 
-Encoder (bidirectional LSTM):
+For reference, the full model. Encoder (bidirectional LSTM):
+
 $$
 e_j = [\overrightarrow{h}_j; \overleftarrow{h}_j]
 $$
 
 Decoder with attention:
+
 $$
 d_i = \text{LSTM}(d_{i-1}, [y_{i-1}; c_{i-1}])
 $$
 
 Pointer distribution:
+
 $$
 P(y_i = j) = \frac{\exp(u_j^i)}{\sum_k \exp(u_k^i)}
 $$
 
+You do not need to memorize these. They are a standard attention-based seq2seq model — the only novelty is that the last softmax ranges over input positions instead of a vocabulary.
+
 ## Influence
 
 Pointer Networks introduced the idea of using attention as output, which influenced:
+
 - **Copy mechanisms** in text generation
 - **Pointer-generator networks** for summarization
 - **Graph neural network outputs**
+
+## Common Confusion
+
+- **Pointer Networks vs. attention**: ordinary attention ([Bahdanau Attention](/bahdanau-attention)) is used *internally* to build a context vector; Pointer Networks repurpose the attention distribution as the *final output*.
+- **Pointing vs. generating**: a pure Pointer Network can only select input elements — it cannot produce a token that is not in the input. Pointer-generator hybrids mix both abilities.
+- **Pointer Networks vs. [Order Matters](/order-matters)**: same lead author, related problems. Pointer Networks solve *variable output vocabularies*; Order Matters studies how *element ordering* affects models operating on sets (and uses pointers in its Write phase).
+
+## Where To Go Next
+
+- Read [Order Matters](/order-matters) for the follow-up work on set-structured inputs and outputs.
+- Read [Bahdanau Attention](/bahdanau-attention) for the attention mechanism being repurposed here.
+- Read [Seq2Seq](/seq2seq) for the encoder-decoder backbone.
+- Read [Attention Is All You Need](/attention-is-all-you-need) to see where attention-centric architectures went next.

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import '../../lib/motion';
 
 export function PPOViz() {
   const [ratio, setRatio] = useState(1.0);

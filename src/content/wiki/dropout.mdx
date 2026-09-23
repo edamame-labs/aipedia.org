@@ -27,15 +27,25 @@ resources:
 
 import { DropoutViz } from '../../components/viz/DropoutViz';
 
-**Dropout**, introduced by Hinton et al. in 2012 and formalized by Srivastava et al. in 2014, is a simple yet powerful regularization technique. During training, randomly "drop" (zero out) neurons with probability $p$. This prevents co-adaptation and dramatically reduces overfitting.
+**Dropout**, introduced by Hinton et al. in 2012 and formalized by Srivastava et al. in 2014, is a simple yet powerful regularization technique: during training, randomly "drop" (zero out) neurons with probability $p$. Forcing the network to work with random pieces missing prevents neurons from co-adapting and dramatically reduces overfitting.
+
+> Regularization means "anything that helps a model generalize to new data instead of memorizing its training data." If that idea is new, keep it in mind — it is the whole point of this page.
+
+## Why Students Should Care
+
+- Dropout was a key ingredient in [AlexNet](/alexnet), the 2012 ImageNet winner that kicked off the deep learning era.
+- It is still used everywhere, including inside Transformers (attention dropout).
+- It is the cleanest example of a big idea: adding *noise* during training can make a model *better* at test time.
 
 ## The Problem: Overfitting
 
-Deep networks have millions of parameters and easily memorize training data. Traditional regularization (L2) wasn't enough for very deep networks.
+Deep networks have millions of parameters and can easily memorize their training data — great training accuracy, poor performance on anything new. Traditional regularization (like L2 weight penalties) wasn't enough for very deep networks.
+
+An intuition for one failure mode: neurons can form brittle "conspiracies," where one neuron's mistake is patched by another specific neuron. These co-adapted circuits fit the training set but fall apart on new data.
 
 ## The Solution: Random Dropout
 
-During each training forward pass, randomly set each neuron's output to zero with probability $p$:
+During each training forward pass, flip a coin for every neuron and set its output to zero with probability $p$:
 
 $$
 \tilde{h}_i = \begin{cases}
@@ -44,15 +54,17 @@ h_i & \text{with probability } 1-p
 \end{cases}
 $$
 
-Typically $p = 0.5$ for hidden layers, $p = 0.2$ for input layers.
+Typically $p = 0.5$ for hidden layers, $p = 0.2$ for input layers. Every training step sees a different random "thinned" network.
 
 ## Interactive Demo
 
 Visualize dropout in action across training iterations:
 
-<DropoutViz client:load />
+<DropoutViz client:visible />
 
 ## Training vs. Inference
+
+Dropout is only active during training. But that creates a mismatch: a neuron that was present only half the time during training is suddenly always present at test time, so downstream activations would be systematically larger. Scaling fixes this.
 
 **Training**: Randomly drop neurons with probability $p$
 
@@ -62,26 +74,28 @@ $$
 h_{test} = (1-p) \cdot h
 $$
 
-Or equivalently, scale during training (inverted dropout):
+Or equivalently, scale during training instead (inverted dropout — what frameworks actually do):
 
 $$
 h_{train} = \frac{h}{1-p} \cdot \text{mask}
 $$
 
-This ensures expected values match between training and inference.
+The takeaway: **the scaling exists so that the expected value of each activation matches between training and inference.**
 
 ## Why Dropout Works
 
 ### 1. Ensemble Effect
-Each dropout mask creates a different "sub-network." Training with dropout is like training an ensemble of $2^n$ networks (where $n$ is the number of neurons), then averaging their predictions.
+Each dropout mask creates a different "sub-network." Training with dropout is like training an ensemble of $2^n$ networks (where $n$ is the number of neurons), then averaging their predictions — and averaging many models is a classic way to generalize better.
 
 ### 2. Prevents Co-adaptation
-Without dropout, neurons can become overly dependent on specific other neurons. Dropout forces each neuron to be useful independently.
+Without dropout, neurons can become overly dependent on specific other neurons. Dropout forces each neuron to be useful on its own, because any of its partners might vanish at any moment.
 
 ### 3. Sparse Representations
 Neurons must be robust to missing peers, encouraging more distributed, sparse representations.
 
 ## The Algorithm
+
+The implementation is a few lines:
 
 ```python
 def dropout_forward(x, p=0.5, training=True):
@@ -96,6 +110,8 @@ def dropout_forward(x, p=0.5, training=True):
 ```
 
 ## Dropout Variations
+
+The same idea — randomly remove something during training — has been applied at many granularities:
 
 | Variant | Description |
 |---------|-------------|
@@ -116,15 +132,17 @@ def dropout_forward(x, p=0.5, training=True):
 
 ## Mathematical Interpretation
 
-Dropout can be viewed as:
+Beyond the intuitions above, dropout can be viewed more formally as:
 
 1. **Approximate Bayesian inference**: Implicitly learning a distribution over weights
 2. **Data augmentation**: Each example is seen with different network architectures
 3. **Noise injection**: Adding multiplicative Bernoulli noise to hidden units
 
+You do not need these framings to use dropout — they matter if you want to study *why* it works.
+
 ## Dropout + BatchNorm
 
-There's a subtle interaction: BatchNorm's statistics change when dropout is applied. Common practices:
+There's a subtle interaction: [BatchNorm](/batch-normalization)'s statistics change when dropout is applied. Common practices:
 - Apply dropout after BatchNorm
 - Use lower dropout rates with BatchNorm
 - Some architectures skip dropout entirely when using BatchNorm
@@ -137,6 +155,8 @@ There's a subtle interaction: BatchNorm's statistics change when dropout is appl
 4. **LSTMs/RNNs**: Use variational dropout (same mask across time steps)
 
 ## Impact on Training
+
+Expect dropout to make training *look* worse while making generalization better:
 
 | Aspect | Without Dropout | With Dropout |
 |--------|----------------|--------------|
@@ -152,3 +172,17 @@ Dropout was transformative:
 - Became standard in AlexNet (2012 ImageNet winner)
 - Reduced reliance on hand-designed regularization
 - Inspired numerous variants and theoretical analysis
+
+## Common Confusion
+
+- **$p$ is the probability of *dropping*, not keeping** — though some libraries define it the other way. Check your framework's docs.
+- **Dropout is off at inference.** If your model behaves randomly at test time, you probably forgot to switch to evaluation mode.
+- **Dropout is a regularizer, not a normalizer.** [BatchNorm](/batch-normalization) rescales activations; dropout removes them. They are different tools that happen to both fight overfitting.
+- **Higher training loss with dropout is expected**, not a bug — the payoff shows up in validation loss.
+
+## Where To Go Next
+
+- Read [AlexNet](/alexnet) for the landmark model that made dropout famous.
+- Read [Batch Normalization](/batch-normalization) for the other standard training-stabilizer and how the two interact.
+- Read [RNN Regularization](/rnn-regularization) for how dropout is adapted to recurrent networks.
+- Read [Transformer](/transformer) to spot where dropout appears in modern architectures.

@@ -58,7 +58,6 @@ async function capture(page, slug, file) {
 
   const island = page.locator('.prose astro-island').first();
   if ((await island.count()) === 0) return 'no visualization';
-  await page.waitForSelector('.prose astro-island:not([ssr])');
   await page.evaluate(() => document.fonts.ready);
 
   // Crop the island (which React never replaces) to the card's 16:10 frame
@@ -71,7 +70,9 @@ async function capture(page, slug, file) {
       background: 'rgb(var(--color-bg-secondary))',
     });
   }, ASPECT);
+  // Visualizations hydrate with client:visible, so bring it on screen first
   await island.scrollIntoViewIfNeeded();
+  await page.waitForSelector('.prose astro-island:not([ssr])');
   await page.waitForTimeout(1500); // let entrance animations settle
 
   const png = await island.screenshot({ animations: 'disabled' });

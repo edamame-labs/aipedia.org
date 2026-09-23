@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import '../../lib/motion';
 
 export function LatentDiffusionViz() {
   const [stage, setStage] = useState<'pixel' | 'encode' | 'diffuse' | 'decode'>('pixel');

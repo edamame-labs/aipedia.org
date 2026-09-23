@@ -38,11 +38,13 @@ export function Thumbnail({ item, className = '' }: { item: Item; className?: st
   );
 }
 
-export function EntryCard({ item }: { item: Item }) {
+export function EntryCard({ item, className = '' }: { item: Item; className?: string }) {
   const links = quickLinks(item.resources);
 
   return (
-    <article className="group relative flex flex-col overflow-hidden rounded-xl border border-border bg-bg transition-colors hover:border-text/25">
+    <article
+      className={`group relative flex flex-col overflow-hidden rounded-xl border border-border bg-bg transition-colors hover:border-text/25 ${className}`}
+    >
       <div className="overflow-hidden border-b border-border bg-bg-secondary">
         {item.thumb ? (
           <Thumbnail item={item} className="transition-transform duration-500 ease-out group-hover:scale-[1.025]" />

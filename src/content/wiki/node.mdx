@@ -27,21 +27,35 @@ resources:
 
 import { NodeTreeViz } from '../../components/viz/NodeTreeViz';
 
-**NODE** (Popov et al., 2019) introduces *differentiable decision trees* built from **oblivious trees**, enabling end-to-end gradient-based learning on tabular data.
+**NODE** (Popov et al., 2019) introduces *differentiable decision trees* built from **oblivious trees**, enabling end-to-end gradient-based learning on tabular data. In short: it takes the model family that dominates spreadsheet-style data — decision trees — and rebuilds it so it can be trained like a neural network.
+
+> If you have not seen gradient-boosted trees, read [GBDT](/gbdt) first — NODE is best understood as a response to it. [Backpropagation](/backpropagation) is the training machinery NODE unlocks.
+
+## Why Students Should Care
+
+- Tabular data (rows and columns, like a database table) is the most common data type in industry, and tree ensembles like [GBDT](/gbdt) have long dominated it — deep learning has struggled here.
+- NODE shows a general, widely reusable trick: **replace a hard, discrete decision with a soft, probabilistic one** so gradients can flow through it.
+- It bridges two worlds: the inductive bias of trees and the end-to-end trainability of neural networks.
+
+## The Problem: Trees Don't Have Gradients
+
+A classic decision tree routes each example with hard yes/no questions: `if x < t`, go left, otherwise go right. That step function is flat almost everywhere, so its gradient is zero — backpropagation has nothing to work with. This is why classic trees are grown greedily, split by split, instead of trained end to end.
 
 ## Key Insight
 
-Hard splits like `if x < t` are replaced with soft routing:
+NODE replaces the hard split with soft routing:
 
 $$
 P(\text{left}) = \sigma\left(\frac{t - x}{\tau}\right)
 $$
 
-The temperature $\tau$ controls smoothness: low values approximate classic trees; higher values yield soft mixtures of paths.
+Instead of a yes/no answer, the example goes left *with some probability* that changes smoothly as $x$ crosses the threshold $t$ — and smooth means differentiable. The temperature $\tau$ controls smoothness: low values approximate classic trees; higher values yield soft mixtures of paths.
+
+The takeaway: **soften the split, and a decision tree becomes a neural network layer you can train with gradients**.
 
 ## Oblivious Decision Trees
 
-An **oblivious tree** uses the **same feature and threshold at every depth**. Each level applies an identical split, producing a symmetric structure.
+An **oblivious tree** uses the **same feature and threshold at every depth**. Each level applies an identical split, producing a symmetric structure. ("Oblivious" is a historical term for this constraint — the split at a given level ignores which branch you came from.)
 
 Benefits:
 
@@ -53,28 +67,41 @@ NODE ensembles stack many such trees, each producing a weighted leaf prediction.
 
 ## entmax vs softmax
 
-Instead of softmax, NODE can use **entmax**, which yields sparse probabilities:
+Which feature should a split look at? Rather than hard-picking one, NODE learns a weighting over features. Instead of softmax, NODE can use **entmax**, which yields sparse probabilities — most features get weight exactly zero:
 
 $$
 \mathrm{entmax}_\alpha(z) = \arg\max_p \; p^\top z + H_\alpha(p)
 $$
 
-For $\alpha = 1.5$, entmax interpolates between softmax (dense) and argmax (hard), improving interpretability and stability.
+You do not need to memorize this. The important idea is: for $\alpha = 1.5$, entmax interpolates between softmax (dense — every feature gets some weight) and argmax (hard — one feature gets everything), improving interpretability and stability.
 
 ## Interactive Visualization
 
-<NodeTreeViz client:load />
+<NodeTreeViz client:visible />
 
 ## Why Differentiable Trees?
 
-- Train trees with **backpropagation**
-- Combine tree structure with neural representations
+- Train trees with **backpropagation** instead of greedy split-by-split construction
+- Combine tree structure with neural representations in one model
 - Smooth optimization landscape vs greedy splits
 - Naturally ensemble-friendly
 
 ## Comparison to Other Tabular Models
 
-- **GBDT**: Strong but non-differentiable, trained greedily
+- **[GBDT](/gbdt)**: Strong but non-differentiable, trained greedily
 - **TabNet**: Attention-based, less interpretable splits
 - **MLPs**: Weak inductive bias for tabular data
 - **NODE**: Tree bias + gradient learning
+
+## Common Confusion
+
+- **NODE here means Neural Oblivious Decision Ensembles** — not Node.js (the JavaScript runtime) and not Neural ODEs (neural ordinary differential equations), which share the abbreviation.
+- **"Oblivious" does not mean the tree ignores the data** — it means every node at the same depth uses the same feature and threshold.
+- **Soft routing is not the same as an ensemble average**: a single soft tree sends each example down *all* paths with different probabilities; an ensemble averages many separate trees. NODE does both.
+- **NODE vs. [GBDT](/gbdt)**: both are tree ensembles for tabular data, but GBDT builds trees greedily one at a time, while NODE trains all its trees jointly with gradients.
+
+## Where To Go Next
+
+- Read [GBDT](/gbdt) for the classic gradient-boosted tree approach NODE competes with.
+- Read [Backpropagation](/backpropagation) for the gradient machinery that soft splits make usable.
+- Read [Adam](/adam) for the kind of optimizer typically used to train models like NODE end to end.

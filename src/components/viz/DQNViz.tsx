@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-
+import '../../lib/motion';
 const GRID_SIZE = 4;
 const GOAL = { x: 3, y: 3 };
 const ACTIONS = ['↑', '↓', '←', '→'];

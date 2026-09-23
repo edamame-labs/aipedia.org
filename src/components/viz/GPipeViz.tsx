@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import '../../lib/motion';
 
 const NUM_DEVICES = 4;
 const NUM_MICROBATCHES = 8;

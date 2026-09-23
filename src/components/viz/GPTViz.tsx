@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import '../../lib/motion';
 
 const PROMPT = ['The', 'quick', 'brown', 'fox'];
 const GENERATED = ['jumps', 'over', 'the', 'lazy', 'dog'];

@@ -140,7 +140,7 @@ export function sourceLabel(url: string): string {
 }
 
 /** Newest additions first; ties broken by the newer work, then title */
-export function byNewest(a: Item, b: Item): number {
+export function byNewest(a: Pick<Item, 'added' | 'year' | 'title'>, b: Pick<Item, 'added' | 'year' | 'title'>): number {
   return (
     (b.added ?? '').localeCompare(a.added ?? '') ||
     (b.year ?? 0) - (a.year ?? 0) ||

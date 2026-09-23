@@ -1,5 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import '../../lib/motion';
+import { createRng } from '../../lib/rng';
 
 const LAYERS = [4, 8, 8, 4];
 
@@ -10,12 +12,17 @@ export function DropoutViz() {
 
   const regenerate = useCallback(() => setKey(k => k + 1), []);
 
-  const generateMask = (size: number): boolean[] => {
-    if (!isTraining) return Array(size).fill(true);
-    return Array.from({ length: size }, () => Math.random() > dropoutRate);
-  };
-
-  const masks = LAYERS.map(size => generateMask(size));
+  // Seeded on `key` so the first render is identical on the server and in the
+  // browser (this component appears on two pages, so a shared generator would
+  // drift out of step during the build), while Regenerate still resamples.
+  const masks = useMemo(() => {
+    const random = createRng(1 + key * 7919);
+    return LAYERS.map(size =>
+      isTraining
+        ? Array.from({ length: size }, () => random() > dropoutRate)
+        : Array<boolean>(size).fill(true)
+    );
+  }, [key, isTraining, dropoutRate]);
 
   return (
     <div className="p-6 bg-bg-secondary rounded-xl border border-border">

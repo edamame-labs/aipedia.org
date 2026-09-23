@@ -1,5 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import '../../lib/motion';
+import { createRng } from '../../lib/rng';
 
 interface Point {
   x: number;
@@ -7,10 +9,11 @@ interface Point {
   id: number;
 }
 
-function generatePoints(n: number): Point[] {
+function generatePoints(n: number, seed: number): Point[] {
+  const random = createRng(seed);
   return Array.from({ length: n }, (_, i) => ({
-    x: 20 + Math.random() * 260,
-    y: 20 + Math.random() * 160,
+    x: 20 + random() * 260,
+    y: 20 + random() * 160,
     id: i,
   }));
 }
@@ -49,13 +52,17 @@ export function PointerNetViz() {
   const [numPoints, setNumPoints] = useState(8);
   const [showHull, setShowHull] = useState(false);
   const [animationStep, setAnimationStep] = useState(0);
+  const [round, setRound] = useState(0);
 
-  const points = useMemo(() => generatePoints(numPoints), [numPoints]);
+  const points = useMemo(
+    () => generatePoints(numPoints, 33961 + round * 7919 + numPoints),
+    [numPoints, round]
+  );
   const hull = useMemo(() => computeConvexHull(points), [points]);
   const hullPoints = hull.map(id => points.find(p => p.id === id)!);
 
   const regenerate = useCallback(() => {
-    setNumPoints(n => n);
+    setRound(r => r + 1);
     setShowHull(false);
     setAnimationStep(0);
   }, []);
@@ -80,7 +87,7 @@ export function PointerNetViz() {
         <h3 className="text-lg font-semibold">Pointer Networks</h3>
         <div className="flex gap-2">
           <button
-            onClick={() => { setNumPoints(n => n === 8 ? 8 : 8); setShowHull(false); }}
+            onClick={regenerate}
             className="px-3 py-1 text-xs rounded-md border border-border hover:border-accent"
           >
             New Points

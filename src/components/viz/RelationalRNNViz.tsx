@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
+import '../../lib/motion';
+import { createRng } from '../../lib/rng';
 
 const MEMORY_SLOTS = 4;
 const TIMESTEPS = 5;
@@ -7,9 +9,14 @@ const TIMESTEPS = 5;
 export function RelationalRNNViz() {
   const [step, setStep] = useState(0);
 
-  const attentionWeights = Array.from({ length: MEMORY_SLOTS }, () =>
-    Array.from({ length: MEMORY_SLOTS }, () => Math.random())
-  );
+  // Seeded per timestep: the weights should change as you step through, not
+  // reshuffle on every unrelated re-render.
+  const attentionWeights = useMemo(() => {
+    const random = createRng(91354 + step * 7919);
+    return Array.from({ length: MEMORY_SLOTS }, () =>
+      Array.from({ length: MEMORY_SLOTS }, () => random())
+    );
+  }, [step]);
 
   return (
     <div className="p-6 bg-bg-secondary rounded-xl border border-border">

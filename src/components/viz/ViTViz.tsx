@@ -1,16 +1,19 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import '../../lib/motion';
+import { createRng } from '../../lib/rng';
 
 const PATCH_GRID = 4;
 const TOTAL_PATCHES = PATCH_GRID * PATCH_GRID;
 
 function generateAttention(size: number): number[][] {
+  const random = createRng(21809);
   const matrix: number[][] = [];
   for (let i = 0; i < size; i++) {
     const row: number[] = [];
     let sum = 0;
     for (let j = 0; j < size; j++) {
-      const v = Math.random();
+      const v = random();
       row.push(v);
       sum += v;
     }

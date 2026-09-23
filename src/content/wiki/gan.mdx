@@ -27,33 +27,44 @@ resources:
 
 import { GANViz } from '../../components/viz/GANViz';
 
-**GANs** (Generative Adversarial Networks), introduced by Goodfellow et al. in 2014, revolutionized generative modeling through a simple but powerful idea: pit two neural networks against each other in a game.
+**GANs** (Generative Adversarial Networks), introduced by Goodfellow et al. in 2014, revolutionized generative modeling through a simple but powerful idea: pit two neural networks against each other in a game. One network learns to create fake data; the other learns to catch fakes. The competition pushes both to improve.
+
+> This page assumes you know how a neural network is trained with a loss and [backpropagation](/backpropagation). For other ways to generate data, see [VAE](/vae) and [Diffusion Models](/diffusion-models).
+
+## Why Students Should Care
+
+- GANs were the dominant approach to image generation for years, and the core idea — adversarial training, where a second network acts as a *learned loss function* — still shows up across deep learning.
+- GANs are a rare example of training framed as a **game between two models** rather than minimizing a single fixed loss. That framing is worth understanding on its own.
+- Knowing why GANs are hard to train (mode collapse, instability) explains why the field later moved toward [diffusion models](/diffusion-models).
+
+## The Counterfeiter and the Detective
+
+Before any math, here is the whole idea as a story:
+
+- A **counterfeiter** (the generator) prints fake money and tries to pass it off as real.
+- A **detective** (the discriminator) inspects money and tries to spot the fakes.
+
+Every time the detective catches a fake, the counterfeiter learns what gave it away and improves. Every time a fake slips through, the detective learns to look more carefully. As training progresses, both improve — until the fakes become indistinguishable from real.
 
 ## The Core Idea
 
 Two networks compete:
-- **Generator (G)**: Creates fake samples from noise
-- **Discriminator (D)**: Distinguishes real from fake
+- **Generator (G)**: Creates fake samples from random noise
+- **Discriminator (D)**: Outputs the probability that a sample is real
 
-The generator tries to fool the discriminator; the discriminator tries not to be fooled.
+The generator tries to fool the discriminator; the discriminator tries not to be fooled. Written as one objective:
 
 $$
 \min_G \max_D \mathbb{E}_{x \sim p_{data}}[\log D(x)] + \mathbb{E}_{z \sim p_z}[\log(1 - D(G(z)))]
 $$
 
-## The Minimax Game
-
-Think of it as a counterfeiter vs. detective:
-- **Counterfeiter (G)**: Gets better at making fake money
-- **Detective (D)**: Gets better at spotting fakes
-
-As training progresses, both improve until the fakes become indistinguishable from real.
+You do not need to memorize this equation. The important idea is: **D is trained to maximize this expression (be a good detective), while G is trained to minimize it (fool the detective)**. The first term rewards D for saying "real" on real data; the second rewards D for saying "fake" on generated data — and G wants exactly the opposite.
 
 ## Interactive Demo
 
 Watch the generator and discriminator compete:
 
-<GANViz client:load />
+<GANViz client:visible />
 
 ## Architecture
 
@@ -64,18 +75,20 @@ $$
 G: z \in \mathbb{R}^{d_z} \rightarrow x \in \mathbb{R}^{d_x}
 $$
 
-Typically uses transposed convolutions to upsample noise into images.
+In plain English: the generator is just a neural network that maps a random vector (say, 100 numbers) to an image (say, 64×64 pixels). For images, it typically uses transposed convolutions to upsample the noise step by step.
 
 ### Discriminator
-Takes a sample and outputs probability it's real:
+Takes a sample and outputs the probability it is real:
 
 $$
 D: x \in \mathbb{R}^{d_x} \rightarrow [0, 1]
 $$
 
-Uses standard convolutions to classify images.
+This is an ordinary binary classifier. For images, it uses standard convolutions.
 
 ## Training Algorithm
+
+Training alternates between the two networks:
 
 ```python
 for epoch in epochs:
@@ -92,16 +105,20 @@ for epoch in epochs:
     update(G, G_loss)
 ```
 
+Note that G never sees real data directly — it only learns from the discriminator's feedback.
+
 ## Challenges
 
+GANs are famously tricky to train. The three classic problems:
+
 ### Mode Collapse
-Generator produces limited variety, ignoring modes of the data distribution.
+The generator finds a few outputs that reliably fool the discriminator and produces only those, ignoring other modes of the data distribution. (Example: a face generator that only ever produces one type of face.)
 
 ### Training Instability
-Delicate balance required—if D is too good, G gets no gradient; if D is too weak, G doesn't improve.
+A delicate balance is required — if D is too good, G gets no useful gradient; if D is too weak, G doesn't improve. Neither network is minimizing a fixed target, so losses can oscillate rather than steadily decrease.
 
 ### Evaluation
-No explicit likelihood. Metrics like FID (Fréchet Inception Distance) and IS (Inception Score) were developed.
+GANs give no explicit likelihood, so there is no obvious number to measure progress. Metrics like FID (Fréchet Inception Distance) and IS (Inception Score) were developed to fill this gap.
 
 ## GAN Variants
 
@@ -117,29 +134,29 @@ No explicit likelihood. Metrics like FID (Fréchet Inception Distance) and IS (I
 
 ## The Nash Equilibrium
 
-At convergence, the optimal discriminator is:
+What happens if training goes perfectly? At convergence, the optimal discriminator is:
 
 $$
 D^*(x) = \frac{p_{data}(x)}{p_{data}(x) + p_g(x)}
 $$
 
-When $p_g = p_{data}$, $D^*(x) = 0.5$ everywhere—the discriminator can't tell real from fake.
+When the generator's distribution matches the data ($p_g = p_{data}$), this gives $D^*(x) = 0.5$ everywhere — the discriminator can't tell real from fake and is reduced to guessing. That is the ideal endpoint of the game.
 
 ## Why GANs Work
 
-1. **Implicit density**: No explicit likelihood computation needed
-2. **Sharp samples**: Adversarial loss produces crisp outputs (unlike blurry VAE reconstructions)
+1. **Implicit density**: No explicit likelihood computation needed — you only need to *sample*, not to score probabilities
+2. **Sharp samples**: The adversarial loss produces crisp outputs (unlike blurry VAE reconstructions)
 3. **Flexible architecture**: Works with any differentiable generator/discriminator
 
 ## Theoretical Connection
 
-The GAN objective minimizes the Jensen-Shannon divergence:
+The original GAN objective, at the optimal discriminator, is equivalent to minimizing the Jensen-Shannon divergence between the data and generator distributions:
 
 $$
 \min_G JS(p_{data} || p_g)
 $$
 
-WGAN instead minimizes the Wasserstein (Earth Mover's) distance, which provides smoother gradients.
+WGAN instead minimizes the Wasserstein (Earth Mover's) distance, which provides smoother gradients — one reason it trains more stably.
 
 ## Historical Impact
 
@@ -151,3 +168,17 @@ GANs enabled:
 - **Data augmentation** (synthetic training data)
 
 Though diffusion models now surpass GANs for image generation, the adversarial training concept remains influential.
+
+## Common Confusion
+
+- **"GAN" is the training setup, not a single network.** After training, you typically throw away the discriminator and keep only the generator.
+- **The discriminator is not a classifier you deploy** — it is best understood as a *learned loss function* that teaches the generator what "realistic" means.
+- **GAN vs. VAE**: a [VAE](/vae) has an encoder and optimizes an explicit likelihood bound (ELBO); a GAN has no encoder and no likelihood — it only learns to sample.
+- **Falling loss does not mean better samples.** Because two networks are competing, GAN losses oscillate; sample quality must be judged separately (visually or with FID).
+
+## Where To Go Next
+
+- Read [VAE](/vae) for the other classic generative model — explicit likelihood instead of an adversarial game.
+- Read [Diffusion Models](/diffusion-models) to see the approach that overtook GANs for image generation.
+- Read [Latent Diffusion](/latent-diffusion) for the architecture behind Stable Diffusion, which borrows the "learned decoder" idea.
+- Read [Backpropagation](/backpropagation) if the gradient-based training loop above felt unfamiliar.

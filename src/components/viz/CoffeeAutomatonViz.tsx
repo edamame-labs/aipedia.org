@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-
+import '../../lib/motion';
 const SIZE = 30;
 
 function initializeGrid(): boolean[][] {

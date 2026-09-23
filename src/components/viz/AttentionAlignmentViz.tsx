@@ -1,10 +1,13 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import '../../lib/motion';
+import { createRng } from '../../lib/rng';
 
 const SOURCE = ['Je', 'suis', 'étudiant', '.'];
 const TARGET = ['I', 'am', 'a', 'student', '.'];
 
 function generateAlignment(): number[][] {
+  const random = createRng(87534);
   const alignment: number[][] = [];
   const patterns = [
     [0.8, 0.1, 0.05, 0.05],
@@ -15,7 +18,7 @@ function generateAlignment(): number[][] {
   ];
   
   for (const pattern of patterns) {
-    const row = pattern.map(v => v + (Math.random() - 0.5) * 0.1);
+    const row = pattern.map(v => v + (random() - 0.5) * 0.1);
     const sum = row.reduce((a, b) => a + b, 0);
     alignment.push(row.map(v => Math.max(0, v / sum)));
   }

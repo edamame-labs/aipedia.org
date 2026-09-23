@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-
 interface Concept {
   id: string;
   title: string;
@@ -26,7 +25,7 @@ export function BrainViz({ pages }: Props) {
   const mouseRef = useRef({ x: 0, y: 0, active: false });
   const [hoveredConcept, setHoveredConcept] = useState<Concept | null>(null);
   const hoveredConceptRef = useRef<Concept | null>(null);
-  const animationRef = useRef<number>();
+  const animationRef = useRef<number | undefined>(undefined);
   const timeRef = useRef(0);
 
   useEffect(() => {

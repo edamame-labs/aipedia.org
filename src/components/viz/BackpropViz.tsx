@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import '../../lib/motion';
 
 const LAYERS = [
   { name: 'Input', neurons: 3 },

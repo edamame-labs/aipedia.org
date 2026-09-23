@@ -23,11 +23,19 @@ resources:
 
 import { ICLViz } from '../../components/viz/ICLViz';
 
-**In-Context Learning (ICL)** is the remarkable ability of large language models to learn new tasks from examples provided in the prompt—without any gradient updates or fine-tuning.
+**In-Context Learning (ICL)** is the ability of large language models to pick up a new task from a few examples written directly in the prompt — with no gradient updates and no fine-tuning. You show the model what you want, and it does it.
+
+> If you are unsure how language models are trained in the first place, read [Pre-training](/pre-training) and [GPT](/gpt) first. This page is about what a *frozen* model can do at inference time.
+
+## Why Students Should Care
+
+- ICL is the reason prompting works at all. Every "few-shot prompt" you write relies on it.
+- It broke a core assumption of machine learning: that learning a new task requires updating weights.
+- It is the foundation for [Chain-of-Thought](/chain-of-thought) prompting and most practical LLM usage.
 
 ## The Phenomenon
 
-Given a few input-output examples, LLMs can generalize to new inputs:
+Give the model a few input-output examples, and it generalizes to a new input:
 
 ```
 Input: "The movie was terrible" → Sentiment: negative
@@ -35,26 +43,27 @@ Input: "I loved every minute" → Sentiment: positive
 Input: "It was a waste of time" → Sentiment:
 ```
 
-The model completes with "negative"—having learned the task from context alone.
+The model completes with "negative" — having learned the task from context alone. Nobody trained it on this exact format; it inferred the pattern from two examples.
 
 ## Why It's Surprising
 
 Traditional machine learning requires:
+
 1. Collect labeled data
 2. Define a loss function
-3. Optimize weights via gradient descent
+3. Optimize weights via gradient descent (see [Backpropagation](/backpropagation))
 
-ICL skips all of this. The model's weights remain frozen; "learning" happens through attention over the prompt.
+ICL skips all of this. The model's weights remain frozen; "learning" happens through attention over the prompt. The examples never change the model — they only change what the model conditions on.
 
 ## Formal Framework
 
-Let $x_1, y_1, \ldots, x_k, y_k$ be demonstration examples and $x_{test}$ be a new input. The model computes:
+Here is the same idea in notation. Let $x_1, y_1, \ldots, x_k, y_k$ be demonstration examples and $x_{test}$ be a new input. The model computes:
 
 $$
 P(y_{test} | x_1, y_1, \ldots, x_k, y_k, x_{test})
 $$
 
-The demonstrations create a **task distribution** that the model conditions on.
+You do not need to memorize this. It just says: **the model predicts the next output given everything in the prompt — the demonstrations create a task pattern that the model conditions on.**
 
 ## How Many Examples?
 
@@ -70,25 +79,28 @@ More examples generally improve accuracy, but with diminishing returns.
 
 See how adding examples affects model predictions:
 
-<ICLViz client:load />
+<ICLViz client:visible />
 
 ## What Makes ICL Work?
 
-Several hypotheses:
+Nobody fully knows — this is an active research question. Several hypotheses:
 
-1. **Task Recognition**: Model recognizes task from examples, retrieves learned behavior
-2. **Implicit Fine-Tuning**: Attention acts as a form of gradient descent
-3. **Bayesian Inference**: Model infers task distribution from demonstrations
-4. **Induction Heads**: Specific attention patterns copy patterns from context
+1. **Task Recognition**: the model recognizes the task from the examples and retrieves behavior it already learned during pre-training
+2. **Implicit Fine-Tuning**: attention over the demonstrations acts like a form of gradient descent, without touching the weights
+3. **Bayesian Inference**: the model infers which task distribution the demonstrations came from
+4. **Induction Heads**: specific attention patterns inside the [Transformer](/transformer) copy patterns from earlier in the context
+
+These are not mutually exclusive; ICL may be all of them at once, in different situations.
 
 ## Emergent Ability
 
 ICL appears only at scale:
-- Small models: Cannot do ICL effectively
-- GPT-3 (175B): Strong ICL ability emerges
-- Larger models: Increasingly robust ICL
 
-This "phase transition" makes ICL an **emergent capability**.
+- Small models: cannot do ICL effectively
+- GPT-3 (175B): strong ICL ability emerges
+- Larger models: increasingly robust ICL
+
+This "phase transition" makes ICL an **emergent capability** — you cannot see it coming by studying small models. See [Scaling Laws](/scaling-laws) for the broader story of what scale buys you.
 
 ## Best Practices
 
@@ -101,7 +113,20 @@ This "phase transition" makes ICL an **emergent capability**.
 
 ## Limitations
 
-- **Context window**: Limited by maximum sequence length
-- **Order sensitivity**: Performance can vary with example ordering
-- **Recency bias**: May weight recent examples more heavily
-- **Task complexity**: Struggles with multi-step reasoning (see Chain-of-Thought)
+- **Context window**: limited by maximum sequence length — every demonstration costs tokens
+- **Order sensitivity**: performance can vary with example ordering
+- **Recency bias**: the model may weight recent examples more heavily
+- **Task complexity**: struggles with multi-step reasoning on its own — that is where [Chain-of-Thought](/chain-of-thought) comes in
+
+## Common Confusion
+
+- **ICL vs. fine-tuning**: fine-tuning updates the model's weights with gradient descent; ICL leaves the weights frozen and only changes the prompt. "Learning" in ICL is conditioning, not training.
+- **ICL vs. Chain-of-Thought**: ICL is the general ability to learn from in-prompt examples. [Chain-of-Thought](/chain-of-thought) is a specific style of examples that include reasoning steps.
+- **Zero-shot is still ICL-adjacent**: even with zero examples, describing a task in plain language and getting correct behavior relies on the same conditioning machinery.
+
+## Where To Go Next
+
+- Read [Chain-of-Thought](/chain-of-thought) for the prompting technique that fixes ICL's weakness on multi-step reasoning.
+- Read [GPT](/gpt) for the paper that made few-shot in-context learning famous.
+- Read [Scaling Laws](/scaling-laws) to see why abilities like ICL show up only in large models.
+- Read [Transformer](/transformer) and [Attention Is All You Need](/attention-is-all-you-need) to understand the attention mechanism that makes conditioning on demonstrations possible.

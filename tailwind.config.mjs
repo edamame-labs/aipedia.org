@@ -10,15 +10,18 @@ export default {
         text: 'rgb(var(--color-text) / <alpha-value>)',
         'text-secondary': 'rgb(var(--color-text-secondary) / <alpha-value>)',
         border: 'rgb(var(--color-border) / <alpha-value>)',
+        'border-strong': 'rgb(var(--color-border-strong) / <alpha-value>)',
         accent: 'rgb(var(--color-accent) / <alpha-value>)',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['Inter Variable', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'ui-monospace', 'monospace'],
       },
       typography: {
         DEFAULT: {
           css: {
+            // Text is held to a 68ch measure in global.css; demos, tables and code
+            // blocks can use the full column
             maxWidth: 'none',
             color: 'rgb(var(--color-text))',
             fontSize: '1rem',

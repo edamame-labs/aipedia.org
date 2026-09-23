@@ -29,13 +29,21 @@ import { LatentDiffusionViz } from '../../components/viz/LatentDiffusionViz';
 
 **Latent Diffusion Models (LDMs)** make high-resolution image generation practical by running the diffusion process in a compressed latent space rather than pixel space. This is the architecture behind Stable Diffusion.
 
+> Read [Diffusion Models](/diffusion-models) first — this page assumes you know the forward/reverse noising process. The [VAE](/vae) page explains the autoencoder used for compression here.
+
+## Why Students Should Care
+
+- This is the architecture of **Stable Diffusion**, one of the most widely used generative models ever released.
+- It demonstrates a general and reusable pattern: **compress first, then model** — do the expensive learning in a small learned space instead of raw data space.
+- The efficiency gains are what moved image generation from datacenter-only to consumer GPUs.
+
 ## The Problem with Pixel-Space Diffusion
 
-Diffusing a 512×512×3 image requires processing 786,432 dimensions per step. For thousands of denoising steps, this is extremely expensive.
+Diffusing a 512×512×3 image requires processing 786,432 dimensions per step. For thousands of denoising steps, this is extremely expensive. Worse, most of that effort is wasted: the majority of pixel-level detail is imperceptible texture, not the content of the image.
 
 ## The Solution: Compress First
 
-LDMs use a two-stage approach:
+The idea: let a small autoencoder handle the perceptual detail, and let diffusion handle only the compressed "essence" of the image. LDMs use a two-stage approach:
 
 1. **Encode**: Compress images to a smaller latent space
 2. **Diffuse**: Run diffusion in latent space
@@ -49,33 +57,33 @@ where $\mathcal{E}$ is the encoder, $\mathcal{D}$ is the decoder, and $\hat{z}$ 
 
 ## The Autoencoder
 
-Typically a **VQ-VAE** or **KL-VAE** trained separately:
+The compressor is typically a **VQ-VAE** or **KL-VAE** trained separately, before any diffusion happens:
 
 $$
 \mathcal{L}_{AE} = \|x - \mathcal{D}(\mathcal{E}(x))\|^2 + \lambda \cdot \text{Reg}(\mathcal{E}(x))
 $$
 
-The latent space is typically 8× or 4× smaller per dimension (64× or 16× in total pixels).
+In plain English: reconstruct the image well (first term), while keeping the latent space well-behaved (second term). The latent space is typically 8× or 4× smaller per dimension (64× or 16× in total pixels).
 
 ## Diffusion in Latent Space
 
-Standard diffusion objective, but on latents:
+Once the autoencoder is trained and frozen, diffusion proceeds exactly as usual — same noising process, same noise-prediction loss — just on latents instead of pixels:
 
 $$
 \mathcal{L}_{LDM} = \mathbb{E}_{z, \epsilon, t}\left[\|\epsilon - \epsilon_\theta(z_t, t, c)\|^2\right]
 $$
 
-where $c$ is the conditioning (text, class, etc.).
+where $c$ is the conditioning (text, class, etc.). Nothing about diffusion itself changes; only the space it operates in.
 
 ## Interactive Visualization
 
 See how the latent space compression enables efficient generation:
 
-<LatentDiffusionViz client:load />
+<LatentDiffusionViz client:visible />
 
 ## Conditioning via Cross-Attention
 
-Text conditioning is injected through cross-attention:
+How does the text prompt get into the model? Text conditioning is injected through cross-attention inside the denoising U-Net:
 
 $$
 \text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d}}\right)V
@@ -84,6 +92,8 @@ $$
 where:
 - $Q$ comes from the latent (image features)
 - $K, V$ come from the text encoder (CLIP or T5)
+
+Intuitively, each spatial location of the image latent "looks up" the most relevant words in the prompt at every denoising step. This is the same attention mechanism as in the [Transformer](/transformer), used across two modalities.
 
 ## Architecture Overview
 
@@ -96,6 +106,8 @@ Noise → U-Net (in latent space) → Denoised Latent
 ```
 
 ## Efficiency Gains
+
+The numbers make the case:
 
 | Metric | Pixel Diffusion | Latent Diffusion |
 |--------|-----------------|------------------|
@@ -123,3 +135,17 @@ By separating perceptual compression (autoencoder) from semantic generation (dif
 - High-quality generation
 - Computational efficiency
 - Flexible conditioning
+
+## Common Confusion
+
+- **"Latent diffusion" vs. "Stable Diffusion"**: latent diffusion is the general architecture; Stable Diffusion is one specific, famous instance of it.
+- **The VAE here is not the generative model.** It is a fixed compressor/decompressor trained in advance; the diffusion U-Net does the actual generation. Compare with a standalone [VAE](/vae), where the VAE itself generates.
+- **Two different "latents"**: the VAE's latent (a compressed image) and the diffusion process's noisy states are both called latents — in an LDM, diffusion's noisy states *live in* the VAE's latent space.
+- **Cross-attention vs. self-attention**: self-attention lets image features attend to each other; cross-attention is what connects image features to the *text prompt*.
+
+## Where To Go Next
+
+- Read [Diffusion Models](/diffusion-models) for the denoising process this page builds on.
+- Read [VAE](/vae) for how the compression stage is trained.
+- Read [CLIP](/clip) for the frozen text encoder that powers prompting.
+- Read [Attention Is All You Need](/attention-is-all-you-need) for the attention mechanism behind cross-attention conditioning.

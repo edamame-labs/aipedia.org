@@ -19,11 +19,23 @@ resources:
 
 import { CLIPViz } from '../../components/viz/CLIPViz';
 
-**CLIP (Contrastive Language-Image Pre-training)** learns to connect images and text by training on 400 million image-text pairs from the internet. This simple approach produces remarkably flexible visual representations.
+**CLIP (Contrastive Language-Image Pre-training)** learns to connect images and text by training on 400 million image-text pairs from the internet. Instead of teaching a model a fixed list of categories, CLIP teaches it to answer one question — *does this caption describe this image?* — and that simple objective produces remarkably flexible visual representations.
+
+> This page assumes you know what an encoder is. If not, read [Transformer](/transformer) and [Vision Transformer](/vision-transformer) first.
+
+## Why Students Should Care
+
+- CLIP is the bridge between **vision and language** — the recipe behind image search, open-vocabulary detection, and the visual side of many multimodal LLMs.
+- It popularized **zero-shot classification**: classifying images from datasets the model was never trained on, just by describing the classes in words.
+- Its text embeddings guide image generators like DALL-E and Stable Diffusion (see [Latent Diffusion](/latent-diffusion)).
+
+## A Quick Example
+
+Show CLIP a photo and two captions: "a photo of a dog" and "a photo of a cat". CLIP embeds the image and both captions into the same vector space and checks which caption's vector points in the most similar direction to the image's vector. Whichever caption matches best wins. That is the entire mechanism — everything below is about how those embeddings are learned.
 
 ## Core Idea: Learn from Captions
 
-Instead of predicting fixed categories, CLIP learns to match images with their natural language descriptions:
+Instead of predicting fixed categories, CLIP learns to match images with their natural language descriptions. The match score is cosine similarity between the two embeddings:
 
 $$
 \text{similarity}(I, T) = \frac{f_I(I) \cdot f_T(T)}{\|f_I(I)\| \cdot \|f_T(T)\|}
@@ -31,9 +43,11 @@ $$
 
 where $f_I$ is an image encoder (ViT or ResNet) and $f_T$ is a text encoder (Transformer).
 
+In plain English: **two encoders map images and captions into a shared space, where matching pairs sit close together**.
+
 ## Contrastive Learning
 
-Given a batch of $N$ image-text pairs, CLIP maximizes similarity of correct pairs while minimizing incorrect ones:
+How do you train those encoders? Take a batch of $N$ image-text pairs. For each image, its own caption is the "right answer" and the other $N-1$ captions are wrong answers — and vice versa for each caption. CLIP maximizes similarity for correct pairs while minimizing it for incorrect ones:
 
 $$
 \mathcal{L} = -\frac{1}{N} \sum_{i=1}^{N} \left[ \log \frac{\exp(s_{ii}/\tau)}{\sum_{j=1}^{N} \exp(s_{ij}/\tau)} + \log \frac{\exp(s_{ii}/\tau)}{\sum_{j=1}^{N} \exp(s_{ji}/\tau)} \right]
@@ -41,28 +55,32 @@ $$
 
 where $s_{ij} = f_I(I_i) \cdot f_T(T_j)$ and $\tau$ is a learned temperature.
 
+You do not need to memorize the loss. The important idea is: **every batch is a matching game — pull true pairs together, push mismatched pairs apart**.
+
 ## Zero-Shot Classification
 
-CLIP enables classification without training on the target dataset:
+Because CLIP understands captions, you can build a classifier for a dataset it has never seen — with no extra training:
 
 1. Create text prompts: "a photo of a \{class\}"
-2. Encode all prompts with text encoder
-3. Encode image with image encoder
-4. Predict class with highest image-text similarity
+2. Encode all prompts with the text encoder
+3. Encode the image with the image encoder
+4. Predict the class with the highest image-text similarity
 
 $$
 p(y|x) = \frac{\exp(f_I(x) \cdot f_T(\text{prompt}_y) / \tau)}{\sum_{c} \exp(f_I(x) \cdot f_T(\text{prompt}_c) / \tau)}
 $$
 
+In other words: **the class names themselves become the classifier**.
+
 ## Interactive Visualization
 
 Explore how CLIP matches images to text descriptions:
 
-<CLIPViz client:load />
+<CLIPViz client:visible />
 
 ## Prompt Engineering
 
-Classification accuracy depends on prompt phrasing:
+Because the classifier is built from text, *how you phrase* the text matters. Classification accuracy depends on the prompt:
 
 | Prompt Template | ImageNet Acc |
 |----------------|--------------|
@@ -71,24 +89,40 @@ Classification accuracy depends on prompt phrasing:
 | "a good photo of a \{class\}" | 69.1% |
 | Ensemble of 80 templates | 76.2% |
 
+A bare class name underperforms because CLIP's training captions were full sentences, not single words.
+
 ## Why CLIP Works
 
 1. **Scale**: 400M image-text pairs provide diverse supervision
-2. **Natural language**: Captures nuanced visual concepts
-3. **Contrastive learning**: Efficient use of batch information
-4. **Zero-shot transfer**: No task-specific training needed
+2. **Natural language**: captures nuanced visual concepts that fixed label sets cannot
+3. **Contrastive learning**: makes efficient use of every batch — each pair supplies many negative examples
+4. **Zero-shot transfer**: no task-specific training needed
 
 ## Applications
 
 CLIP powers:
-- **Image search**: Find images matching text queries
-- **DALL-E/Stable Diffusion**: Guide image generation
-- **Open-vocabulary detection**: Detect objects by name
-- **Multimodal models**: Visual understanding in LLMs
+
+- **Image search**: find images matching text queries
+- **DALL-E / Stable Diffusion**: guide image generation
+- **Open-vocabulary detection**: detect objects by name
+- **Multimodal models**: visual understanding in LLMs
 
 ## Limitations
 
 - Struggles with fine-grained recognition
-- Biases from internet data
-- Text encoder limits complex reasoning
+- Inherits biases from internet data
+- The text encoder limits complex reasoning
 - Counting and spatial relationships remain challenging
+
+## Common Confusion
+
+- **CLIP does not generate images.** It scores image-text similarity. Generators like DALL-E and Stable Diffusion *use* CLIP-style embeddings for guidance, but the generation happens elsewhere — see [Diffusion Models](/diffusion-models).
+- **"Zero-shot" here means no training on the target dataset** — CLIP still saw 400M image-text pairs during pre-training. It is zero-shot with respect to the task, not to data in general.
+- **CLIP is a training method plus a pair of encoders, not one specific network.** The image encoder can be a [Vision Transformer](/vision-transformer) or a [ResNet](/resnet); the recipe is the same.
+
+## Where To Go Next
+
+- Read [Vision Transformer](/vision-transformer) for CLIP's strongest image encoder
+- Read [Transformer](/transformer) for the architecture behind the text encoder
+- Read [Pre-training](/pre-training) for the broader paradigm CLIP belongs to
+- Read [Latent Diffusion](/latent-diffusion) to see text embeddings steering image generation

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import '../../lib/motion';
 
 // Simulated 2D word embeddings (t-SNE projected)
 const WORDS: { word: string; x: number; y: number; category: string }[] = [

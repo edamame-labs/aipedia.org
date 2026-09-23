@@ -1,15 +1,18 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import '../../lib/motion';
+import { createRng } from '../../lib/rng';
 
 function generateActivations(count: number, epoch: number, normalized: boolean): number[] {
+  const random = createRng(38277 + epoch * 101 + (normalized ? 7 : 0));
   const baseShift = normalized ? 0 : epoch * 0.3;
   const baseScale = normalized ? 1 : 1 + epoch * 0.2;
 
   return Array.from({ length: count }, () => {
-    const raw = (Math.random() - 0.5) * 2 * baseScale + baseShift;
+    const raw = (random() - 0.5) * 2 * baseScale + baseShift;
     if (normalized) {
       // Simulate normalized distribution (centered, unit variance)
-      return (Math.random() - 0.5) * 2;
+      return (random() - 0.5) * 2;
     }
     return raw;
   });

@@ -27,52 +27,73 @@ resources:
 
 import { DQNViz } from '../../components/viz/DQNViz';
 
-**Deep Q-Networks (DQN)** demonstrated that deep reinforcement learning could achieve superhuman performance on Atari games, learning directly from pixels. It was a landmark result that sparked the modern deep RL revolution.
+**Deep Q-Networks (DQN)** showed that a neural network could learn to play Atari games at superhuman level directly from raw pixels, using nothing but trial and error. It was the landmark result that sparked the modern deep reinforcement learning revolution.
+
+> If terms like "Q-value" or "policy" are new to you, read [Reinforcement Learning](/reinforcement-learning) first. This page covers the classic **value-based** approach; [Policy Gradient](/policy-gradient) covers the other big family.
+
+## Why Students Should Care
+
+- DQN is the standard first "deep RL" algorithm: it connects supervised deep learning to reinforcement learning.
+- Its two stabilization tricks (experience replay and target networks) show up all over modern RL.
+- It opened the door to AlphaGo, robotic control, and much of today's RL research.
+
+## The Setup in Plain English
+
+Imagine learning to play a video game with no instructions. All you see is the screen, all you get is the score. You need a way to answer one question at every moment: **"How good is each button press right now, counting all the points it will lead to later?"**
+
+A function that answers that question is called a **Q-function**. DQN's whole job is to learn it with a neural network.
 
 ## Q-Learning Refresher
 
-Learn the optimal action-value function:
+Q-learning tries to learn the optimal action-value function: the best total future reward you can get by taking action $a$ in state $s$ and playing well afterwards.
 
 $$
 Q^*(s, a) = \mathbb{E}\left[r + \gamma \max_{a'} Q^*(s', a') \mid s, a\right]
 $$
 
-The optimal policy: $\pi^*(s) = \arg\max_a Q^*(s, a)$
+In words: the value of an action equals the immediate reward, plus the (discounted) value of the best action available in the next state.
 
-## The Challenge: Function Approximation
+Once you know $Q^*$, acting well is easy — just pick the highest-scoring action: $\pi^*(s) = \arg\max_a Q^*(s, a)$.
 
-For large state spaces (like images), we can't store Q-values in a table. Solution: approximate with a neural network:
+## The Challenge: Too Many States for a Table
+
+Classic Q-learning stores one Q-value per state-action pair in a table. That works for tiny grid worlds, but an Atari screen has far too many possible pixel configurations to enumerate.
+
+The fix is to **approximate** the table with a neural network:
 
 $$
 Q(s, a; \theta) \approx Q^*(s, a)
 $$
 
-But naive combination of deep learning + Q-learning is unstable!
+Here $\theta$ is the network's weights. But there is a catch: naively combining deep learning with Q-learning is unstable. The network chases its own predictions and training tends to blow up. DQN's real contribution is two tricks that make it stable.
 
 ## Key Innovations
 
 ### 1. Experience Replay
 
-Store transitions $(s, a, r, s')$ in a replay buffer and sample random mini-batches:
+Instead of training on experiences in the order they happen, store each transition $(s, a, r, s')$ in a large **replay buffer** and train on random mini-batches drawn from it.
 
-- Breaks correlation between consecutive samples
-- Reuses experience efficiently
-- Stabilizes training
+Why this helps:
+
+- Consecutive game frames are nearly identical. Random sampling breaks that correlation, which neural networks need for stable training.
+- Each experience gets reused many times, so learning is more data-efficient.
+- Overall, training becomes much more stable.
 
 ### 2. Target Network
 
-Use a separate network for computing targets:
+The Q-learning update is strange: the network's training target is computed *from the network itself*. As the network changes, its own targets shift underneath it — like an archer aiming at a target strapped to their own arm.
+
+DQN fixes this by computing targets with a frozen copy of the network:
 
 $$
 y = r + \gamma \max_{a'} Q(s', a'; \theta^-)
 $$
 
-where $\theta^-$ is a copy of $\theta$ updated periodically (e.g., every 10k steps).
-
-- Prevents moving target problem
-- Dramatically improves stability
+where $\theta^-$ is a copy of $\theta$ that is only refreshed periodically (e.g., every 10k steps). Between refreshes the target stays still, which dramatically improves stability.
 
 ## The DQN Loss
+
+Put together, DQN minimizes a squared error between predicted Q-values and the (frozen-target) estimates:
 
 $$
 \mathcal{L}(\theta) = \mathbb{E}_{(s,a,r,s') \sim \mathcal{D}}\left[(y - Q(s, a; \theta))^2\right]
@@ -80,11 +101,13 @@ $$
 
 where $y = r + \gamma \max_{a'} Q(s', a'; \theta^-)$.
 
+You do not need to memorize the equation. The important idea is: **make the network's Q-value prediction match "reward plus best next-state value", using a stale copy of the network for the second part.**
+
 ## Interactive Visualization
 
 Watch DQN learn to estimate Q-values:
 
-<DQNViz client:load />
+<DQNViz client:visible />
 
 ## Algorithm
 
@@ -113,6 +136,8 @@ for episode in range(num_episodes):
             θ⁻ = θ
 ```
 
+The "ε-greedy" part handles **exploration**: with probability ε the agent tries a random action instead of its current best guess, so it keeps discovering new strategies.
+
 ## Hyperparameters
 
 | Parameter | Typical Value |
@@ -126,6 +151,8 @@ for episode in range(num_episodes):
 
 ## Improvements (Rainbow DQN)
 
+Later work stacked several upgrades on top of vanilla DQN. The combination is called **Rainbow**:
+
 | Enhancement | Benefit |
 |-------------|---------|
 | Double DQN | Reduces overestimation bias |
@@ -138,8 +165,23 @@ for episode in range(num_episodes):
 ## Impact
 
 DQN proved that:
-1. Deep RL can learn from high-dimensional sensory input
+
+1. Deep RL can learn from high-dimensional sensory input (raw pixels)
 2. Experience replay + target networks stabilize training
 3. A single architecture can master diverse tasks
 
 This opened the door to AlphaGo, robotic manipulation, and modern RL research.
+
+## Common Confusion
+
+- **DQN vs. Q-learning**: Q-learning is the underlying update rule; DQN is Q-learning plus a neural network approximator plus the two stability tricks.
+- **Value-based vs. policy-based**: DQN never represents a policy directly — it learns action *values* and derives the policy by taking the argmax. [Policy Gradient](/policy-gradient) methods learn the policy itself.
+- **Target network vs. replay buffer**: both fight instability, but differently. Replay breaks *sample correlation*; the target network stops the *moving target* problem.
+- **DQN and continuous actions**: the $\max_{a'}$ step requires enumerating actions, so vanilla DQN only works for discrete action spaces.
+
+## Where To Go Next
+
+- Read [Reinforcement Learning](/reinforcement-learning) for the MDP framing and value functions DQN builds on.
+- Read [Policy Gradient](/policy-gradient) for the other major family of RL algorithms.
+- Read [PPO](/ppo) for the policy-based algorithm that dominates modern practice.
+- Read [RLHF](/rlhf) to see how RL ideas reach language model training.

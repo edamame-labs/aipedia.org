@@ -31,7 +31,23 @@ resources:
 
 import { BERTViz } from '../../components/viz/BERTViz';
 
-**BERT** (Bidirectional Encoder Representations from Transformers) revolutionized NLP by introducing deep bidirectional pre-training. Published by Devlin et al. at Google in 2018, it achieved state-of-the-art results on 11 NLP tasks and became one of the most cited AI papers ever.
+**BERT** (Bidirectional Encoder Representations from Transformers) is a language model that reads a sentence in both directions at once. Published by Devlin et al. at Google in 2018, it achieved state-of-the-art results on 11 NLP tasks and became one of the most cited AI papers ever.
+
+> If this page feels too fast, read [Transformer](/transformer) first. BERT is an **encoder-only** Transformer trained for understanding; its sibling [GPT](/gpt) is a **decoder-only** Transformer trained for generation.
+
+## Why Students Should Care
+
+- BERT popularized the **pre-train then fine-tune** recipe that most of modern NLP still follows.
+- It shows why **bidirectional context** matters: understanding a word often requires the words after it, not just before.
+- BERT-style encoders still power search engines, classifiers, and embedding models today.
+
+## A Quick Example
+
+Fill in the blank:
+
+`The man went to the [BLANK] to buy milk.`
+
+You can guess "store" because you read the whole sentence — including "to buy milk," which comes **after** the blank. A left-to-right model only sees "The man went to the" and has far less to work with. BERT is trained on exactly this kind of fill-in-the-blank task, so every word gets to use context from both sides.
 
 ## The Key Insight
 
@@ -41,34 +57,40 @@ $$
 P(w_i | w_1, ..., w_{i-1}, w_{i+1}, ..., w_n)
 $$
 
-This bidirectional conditioning allows each token to "see" the entire sentence when building its representation.
+You do not need to memorize the notation. The important idea is: **predict a hidden word from everything around it**, so every token "sees" the entire sentence when building its representation.
 
 ## Pre-training Objectives
 
+BERT is pre-trained on two tasks that need no human labels — the text itself is the supervision.
+
 ### 1. Masked Language Modeling (MLM)
 
-Randomly mask 15% of tokens and predict them:
+Randomly mask 15% of tokens and predict them. The masked tokens are:
 
 - 80% replaced with `[MASK]`
-- 10% replaced with random token
-- 10% unchanged
+- 10% replaced with a random token
+- 10% left unchanged
 
 $$
 \mathcal{L}_{MLM} = -\sum_{i \in \text{masked}} \log P(w_i | \mathbf{h}_i)
 $$
 
+In plain English: hide some words, make the model guess them, and penalize wrong guesses. The mix of replacements stops the model from only learning about the special `[MASK]` token, which never appears at fine-tuning time.
+
 ### 2. Next Sentence Prediction (NSP)
 
-Given sentence A and B, predict if B follows A:
+Given sentence A and sentence B, predict whether B actually follows A in the original text:
 
 ```
 [CLS] The cat sat on the mat [SEP] It was comfortable [SEP]
 Label: IsNext
 ```
 
+This teaches the model relationships **between** sentences, useful for tasks like question answering.
+
 ## Architecture
 
-BERT uses the **Transformer encoder** (no decoder):
+BERT uses the **Transformer encoder** (no decoder), stacked deep:
 
 | Model | Layers | Hidden | Heads | Parameters |
 |-------|--------|--------|-------|------------|
@@ -79,44 +101,62 @@ BERT uses the **Transformer encoder** (no decoder):
 
 Explore how BERT processes tokens bidirectionally and learns masked predictions:
 
-<BERTViz client:load />
+<BERTViz client:visible />
 
 ## Input Representation
 
-BERT's input combines three embeddings:
+Before any attention happens, BERT turns each token into a vector by adding three embeddings together:
 
 $$
 \text{Input} = \text{Token Emb} + \text{Segment Emb} + \text{Position Emb}
 $$
 
-- **Token embeddings**: WordPiece vocabulary (30K tokens)
-- **Segment embeddings**: Distinguish sentence A vs B
-- **Position embeddings**: Learned (not sinusoidal)
+- **Token embeddings**: which word piece this is (WordPiece vocabulary, 30K tokens)
+- **Segment embeddings**: whether the token belongs to sentence A or sentence B
+- **Position embeddings**: where the token sits in the sequence (learned, not sinusoidal)
 
 ## Fine-tuning
 
 BERT popularized the "pre-train then fine-tune" paradigm:
 
-1. **Pre-train** on massive unlabeled text (BooksCorpus + Wikipedia)
-2. **Fine-tune** on task-specific labeled data
+1. **Pre-train** once on massive unlabeled text (BooksCorpus + Wikipedia)
+2. **Fine-tune** cheaply on task-specific labeled data
 
-Fine-tuning adds a simple output layer:
-- **Classification**: Use `[CLS]` representation
-- **Token tagging**: Use each token's representation
-- **QA**: Predict start/end span positions
+Fine-tuning adds only a simple output layer on top of the pre-trained encoder:
+
+- **Classification**: use the `[CLS]` token's representation
+- **Token tagging**: use each token's representation
+- **Question answering**: predict start/end span positions
+
+The heavy lifting — learning what language means — happens once during pre-training and transfers to every downstream task.
 
 ## Why It Works
 
-1. **Bidirectional context**: Every token sees full sentence
-2. **Deep representations**: 12-24 transformer layers
-3. **Transfer learning**: Pre-trained knowledge transfers to many tasks
-4. **Attention patterns**: Learns syntactic and semantic relationships
+1. **Bidirectional context**: every token sees the full sentence
+2. **Deep representations**: 12-24 Transformer layers
+3. **Transfer learning**: pre-trained knowledge transfers to many tasks
+4. **Attention patterns**: the model learns syntactic and semantic relationships
 
 ## Historical Impact
 
-BERT sparked the "BERT-ology" era:
-- **RoBERTa**: Better training recipe (no NSP, more data)
-- **ALBERT**: Parameter sharing for efficiency
-- **DistilBERT**: Knowledge distillation (40% smaller, 60% faster)
-- **SpanBERT**: Span masking for better representations
-- **ELECTRA**: Replaced token detection instead of masking
+BERT sparked the "BERT-ology" era of follow-up models:
+
+- **RoBERTa**: better training recipe (no NSP, more data)
+- **ALBERT**: parameter sharing for efficiency
+- **DistilBERT**: knowledge distillation (40% smaller, 60% faster)
+- **SpanBERT**: span masking for better representations
+- **ELECTRA**: replaced-token detection instead of masking
+
+## Common Confusion
+
+- **BERT is an encoder, GPT is a decoder.** BERT reads text in both directions but cannot naturally generate text; GPT generates text but only sees left context.
+- **Masked language modeling is not the same as next-token prediction.** MLM fills in blanks anywhere in the sentence; GPT-style models always predict the next token.
+- **BERT the model vs. the paradigm.** "BERT" often refers loosely to any encoder-only pre-trained Transformer (RoBERTa, ALBERT, etc.), not just the original 2018 model.
+
+## Where To Go Next
+
+- Read [Transformer](/transformer) for the architecture BERT is built on
+- Read [GPT](/gpt) for the decoder-only, generative alternative
+- Read [Attention Is All You Need](/attention-is-all-you-need) for the original Transformer paper
+- Read [Pre-training](/pre-training) for the broader pre-train-then-adapt paradigm
+- Read [Word2Vec](/word2vec) for the earlier, static word embeddings BERT improved on

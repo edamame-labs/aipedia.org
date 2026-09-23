@@ -19,69 +19,83 @@ resources:
 
 import { LSTMCellViz } from '../../components/viz/LSTMCellViz';
 
-**Understanding LSTM Networks** is Christopher Olah's influential blog post that provides an intuitive visual explanation of how LSTMs work. It's become the standard introduction to recurrent architectures.
+**Understanding LSTM Networks** is Christopher Olah's influential blog post that explains, with pictures and plain language, how Long Short-Term Memory networks work. It became the standard introduction to recurrent architectures, and this page follows its spirit: intuition first, equations second.
 
-## The Problem with Vanilla RNNs
+> If you have never seen a recurrent neural network before, read [The Unreasonable Effectiveness of RNNs](/rnn-effectiveness) first — it shows what RNNs can do. This page explains the machinery that makes them remember.
 
-Standard RNNs struggle with long-range dependencies. To predict the word in "I grew up in France... I speak fluent ___", the model needs information from many steps ago.
+## Why Students Should Care
 
-In theory, RNNs can learn such dependencies. In practice, gradients either:
-- **Vanish**: Shrink exponentially, preventing learning of long-range patterns
-- **Explode**: Grow exponentially, causing unstable training
+- LSTMs were the workhorse of sequence modeling (translation, speech, text generation) for a decade before [Transformers](/transformer).
+- The core trick — a protected path that lets gradients flow across many steps — reappears in ResNet skip connections and Transformer residual streams.
+- Gating (learned, soft on/off switches) is a fundamental design pattern you will meet again in GRUs, [Mamba](/mamba), and mixture-of-experts models.
+- Understanding *why* vanilla RNNs fail teaches you about vanishing gradients, one of the central obstacles in deep learning.
 
-## The LSTM Solution
+## The Problem: Remembering Things From Long Ago
 
-LSTMs introduce a **cell state**—a highway that allows information to flow across many timesteps with minimal modification. Gates control what information enters, leaves, or stays in this cell state.
+Try to fill in the blank: "I grew up in France... I speak fluent ___."
+
+To predict "French", a model needs a clue ("France") from many words earlier. A standard RNN passes information forward through a single hidden state, squashed through a nonlinearity at every step. In theory it can carry that clue forward. In practice, gradients flowing backward through many steps either:
+
+- **Vanish**: shrink exponentially, so the model never learns long-range patterns
+- **Explode**: grow exponentially, making training unstable
+
+So vanilla RNNs mostly learn short-range patterns and forget the rest.
+
+## The LSTM Solution: A Conveyor Belt With Gates
+
+LSTMs add a **cell state** — think of it as a conveyor belt running straight through time. Information placed on the belt can ride along for many timesteps with almost no modification. Small learned switches called **gates** control what gets put on the belt, what gets removed, and what gets read off.
+
+That is the whole idea. The four equations below just implement the belt and its three kinds of workers.
 
 ## The Four Components
 
-### 1. Forget Gate
+Each gate is a small neural layer that looks at the previous hidden state $h_{t-1}$ and the current input $x_t$, and outputs numbers between 0 and 1 (via the sigmoid $\sigma$). Think of each output as a percentage: "let this much through."
 
-Decides what to discard from cell state:
+### 1. Forget Gate — what to erase from the belt
 
 $$
 f_t = \sigma(W_f \cdot [h_{t-1}, x_t] + b_f)
 $$
 
-Output near 0 = forget, near 1 = keep.
+Output near 0 means "forget this part of the cell state"; near 1 means "keep it."
 
-### 2. Input Gate
-
-Decides which values to update:
+### 2. Input Gate — which slots to write to
 
 $$
 i_t = \sigma(W_i \cdot [h_{t-1}, x_t] + b_i)
 $$
 
-### 3. Cell Candidate
-
-Creates new candidate values to potentially add:
+### 3. Cell Candidate — what new content to write
 
 $$
 \tilde{C}_t = \tanh(W_C \cdot [h_{t-1}, x_t] + b_C)
 $$
 
-### 4. Output Gate
+The candidate proposes new values; the input gate decides how much of them actually gets added.
 
-Decides what to output based on cell state:
+### 4. Output Gate — what to read off the belt right now
 
 $$
 o_t = \sigma(W_o \cdot [h_{t-1}, x_t] + b_o)
 $$
 
+You do not need to memorize which letter is which. The important idea is: **three gates (forget, input, output) plus one candidate, all computed from the same two inputs**.
+
 ## Cell State Update
 
-The cell state update combines forgetting and adding:
+The belt update combines "erase a little" and "write a little":
 
 $$
 C_t = f_t \ast C_{t-1} + i_t \ast \tilde{C}_t
 $$
 
+In words: the new cell state is the old cell state (scaled by how much we keep) plus the new candidate (scaled by how much we admit). Everything else in the LSTM exists to compute those two scaling factors.
+
 ## Interactive Demo
 
 Explore each gate and watch information flow through the LSTM cell:
 
-<LSTMCellViz client:load />
+<LSTMCellViz client:visible />
 
 ## Why LSTMs Work
 
@@ -91,19 +105,35 @@ $$
 \frac{\partial C_t}{\partial C_{t-1}} = f_t
 $$
 
-If the forget gate is close to 1, gradients flow unchanged. This solves the vanishing gradient problem for relevant information.
+If the forget gate stays close to 1, the gradient passes through unchanged step after step — no repeated squashing, so no exponential shrinking. This solves the vanishing gradient problem for information the network has decided to keep.
 
-## The Intuition
+## The Intuition, One More Time
 
 Think of an LSTM as a conveyor belt (cell state) with workers (gates):
-- **Forget gate**: Workers removing items from the belt
-- **Input gate**: Workers adding new items
-- **Output gate**: Workers taking items off for current use
+
+- **Forget gate**: workers removing items from the belt
+- **Input gate**: workers adding new items
+- **Output gate**: workers taking items off for current use
 
 The belt keeps moving; workers only modify what's necessary.
 
 ## Variants
 
-- **GRU (Gated Recurrent Unit)**: Combines forget and input gates, simpler
-- **Peephole Connections**: Gates can look at cell state directly
-- **Bidirectional LSTM**: Process sequence in both directions
+- **GRU (Gated Recurrent Unit)**: merges the forget and input gates into one — simpler, often just as good
+- **Peephole connections**: gates get to look at the cell state directly
+- **Bidirectional LSTM**: runs one LSTM forward and one backward over the sequence, so each position sees both past and future context
+
+## Common Confusion
+
+- **LSTM vs. RNN**: an LSTM *is* an RNN — a specific recurrent cell design. "Vanilla RNN" usually means the simple tanh cell without gates.
+- **Cell state vs. hidden state**: the cell state $C_t$ is the long-term conveyor belt; the hidden state $h_t$ is the filtered, per-step output read off it by the output gate. They are different vectors.
+- **Gates are not binary**: gate outputs are continuous values between 0 and 1, learned by gradient descent — not hard switches.
+- **This page vs. the paper**: LSTMs were invented by Hochreiter and Schmidhuber in 1997; Olah's 2015 post is the explanation that made them widely understood.
+
+## Where To Go Next
+
+- Read [The Unreasonable Effectiveness of RNNs](/rnn-effectiveness) to see what LSTM-style models can generate.
+- Read [RNN Regularization](/rnn-regularization) for how to apply dropout to LSTMs without breaking their memory.
+- Read [Relational RNNs](/relational-rnn) for a memory design where stored facts interact via attention.
+- Read [Seq2Seq](/seq2seq) for how two LSTMs (encoder and decoder) power machine translation.
+- Read [Transformer](/transformer) for the architecture that replaced recurrence with attention.

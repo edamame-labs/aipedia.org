@@ -23,7 +23,15 @@ resources:
 
 import { CS231nViz } from '../../components/viz/CS231nViz';
 
-**CS231n** is Stanford's renowned course on Convolutional Neural Networks for Visual Recognition. It provides a comprehensive foundation in deep learning, from basic neural networks to state-of-the-art architectures.
+**CS231n** is Stanford's renowned course on Convolutional Neural Networks for Visual Recognition. It builds deep learning up from first principles — starting with basic classifiers, working through neural networks and [backpropagation](/backpropagation), and ending at state-of-the-art architectures.
+
+> This page is about a **course**, not a paper or an architecture. If you want a specific architecture, jump straight to [AlexNet](/alexnet) or [ResNet](/resnet).
+
+## Why Students Should Care
+
+- CS231n is arguably the most popular on-ramp into deep learning: lectures, notes, and assignments are all **free online**.
+- It teaches the skill frameworks hide from you — implementing [backpropagation](/backpropagation) by hand — which pays off every time you debug a model.
+- Its syllabus doubles as a reading map for this wiki: many pages here ([AlexNet](/alexnet), [ResNet](/resnet), [Dropout](/dropout), [GAN](/gan)) are covered in the course.
 
 ## Course Philosophy
 
@@ -37,36 +45,37 @@ The course emphasizes:
 
 ### Image Classification Pipeline
 
-The course starts with the fundamental task: mapping pixels to categories.
+The course starts with the fundamental task: mapping pixels to categories. In plain English, a classifier is a function that takes an image (a grid of numbers) and outputs one of $K$ labels:
 
 $$
 f: \mathbb{R}^{H \times W \times C} \rightarrow \{1, 2, ..., K\}
 $$
 
-Students implement k-NN, linear classifiers, and loss functions before moving to neural networks.
+Students implement k-NN, linear classifiers, and loss functions before touching a neural network — so that when networks arrive, they feel like a natural upgrade rather than magic.
 
 ### Backpropagation
 
-The heart of deep learning—computing gradients through computational graphs:
+The heart of deep learning: computing gradients through computational graphs by chaining local derivatives.
 
 $$
 \frac{\partial L}{\partial w} = \frac{\partial L}{\partial y} \cdot \frac{\partial y}{\partial w}
 $$
 
-Implementing backprop from scratch builds intuition that frameworks abstract away.
+That is just the chain rule — but implementing it from scratch, gate by gate, builds intuition that frameworks like PyTorch abstract away. See [Backpropagation](/backpropagation) for the full treatment.
 
 ### CNN Architectures
 
-Progression through landmark architectures:
-- **LeNet** → **AlexNet** → **VGG** → **GoogLeNet** → **ResNet**
+The course walks through the landmark architectures in order:
 
-Each architecture introduces key concepts: depth, skip connections, inception modules.
+- **LeNet** → **[AlexNet](/alexnet)** → **VGG** → **GoogLeNet** → **[ResNet](/resnet)**
+
+Each step introduces a key concept: depth, skip connections, inception modules. Reading them in sequence shows *why* each idea was invented, not just what it is.
 
 ## Interactive Overview
 
 Explore the course structure and key concepts:
 
-<CS231nViz client:load />
+<CS231nViz client:visible />
 
 ## Key Assignments
 
@@ -78,6 +87,19 @@ Explore the course structure and key concepts:
 | RNNs & Attention | Sequence modeling |
 | GANs | Generative modeling |
 
+## Common Confusion
+
+- **CS231n is a course, not a model or a paper.** Citing "CS231n" means citing teaching material, not a research result.
+- **The website vs. the notes:** cs231n.stanford.edu is the official course page; cs231n.github.io hosts the written lecture notes. Both are freely accessible.
+- **CNNs vs. deep learning in general:** the course focuses on *vision*. For sequences and language, see [Understanding LSTMs](/understanding-lstms) or [Transformer](/transformer).
+
+## Where To Go Next
+
+- Read [Backpropagation](/backpropagation) for the algorithm at the heart of the course
+- Read [AlexNet](/alexnet) and [ResNet](/resnet) for the landmark architectures it covers
+- Read [Dropout](/dropout) for the regularization technique used throughout the assignments
+- Read [GAN](/gan) for the generative modeling covered in the final assignment
+
 ## Key Insight
 
-CS231n's lasting value isn't specific architectures—it's building intuition for how neural networks learn hierarchical representations from data.
+CS231n's lasting value isn't specific architectures — it's building intuition for how neural networks learn hierarchical representations from data.

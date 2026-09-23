@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-
+import '../../lib/motion';
 export function GANViz() {
   const [epoch, setEpoch] = useState(0);
   const [isTraining, setIsTraining] = useState(false);

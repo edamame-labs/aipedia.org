@@ -15,23 +15,35 @@ resources:
 
 import { GPipeViz } from '../../components/viz/GPipeViz';
 
-**GPipe** enables training of giant neural networks that don't fit on a single accelerator by partitioning the model across devices and pipelining micro-batches to maximize utilization.
+**GPipe** is a technique for training giant neural networks that don't fit on a single accelerator. It splits the model into consecutive stages across devices, then keeps every device busy by streaming small "micro-batches" through the pipeline like an assembly line.
+
+> This page assumes you know the basic training loop (forward pass, backward pass, weight update). If not, read [Backpropagation](/backpropagation) first.
+
+## Why Students Should Care
+
+- Every large language model today is trained across many devices; pipeline parallelism is one of the core strategies, and GPipe is its classic formulation.
+- The efficiency analysis here (pipeline "bubbles") is a clean, worked example of the kind of systems reasoning that dominates large-scale ML.
+- The memory trick GPipe popularized — activation recomputation — shows up everywhere in modern training.
 
 ## The Problem
 
-Large models exceed single-device memory. Naive model parallelism (one layer per device) is inefficient:
+Some models are simply too large for one accelerator's memory. The obvious fix is to put different layers on different devices — layers 1-10 on device 1, layers 11-20 on device 2, and so on. But think about what happens with a single batch: device 2 cannot start until device 1 finishes, and device 1 then sits idle while everyone else works. At any moment, only one device is busy:
 
 $$
 \text{Utilization} = \frac{1}{K}
 $$
 
-where $K$ is the number of devices. Most devices sit idle waiting for others.
+where $K$ is the number of devices. With 8 devices, you pay for 8 accelerators and effectively use 1.
 
 ## The GPipe Solution
+
+GPipe fixes this like a factory assembly line: instead of pushing one big batch through, push many small pieces so every station works at once.
 
 1. **Partition** the model into $K$ consecutive stages across $K$ devices
 2. **Split** each mini-batch into $M$ micro-batches
 3. **Pipeline** micro-batches through the stages
+
+While device 2 processes micro-batch 1, device 1 is already processing micro-batch 2.
 
 ## Pipeline Schedule
 
@@ -41,42 +53,42 @@ $$
 \text{Time} = (K - 1) + M + (K - 1)
 $$
 
-The $(K-1)$ terms are "pipeline bubbles" at start and end.
+The $(K-1)$ terms are "pipeline bubbles" — the ramp-up at the start (later stages waiting for their first micro-batch) and the drain at the end (earlier stages having nothing left to do).
 
 ## Interactive Demo
 
 Watch micro-batches flow through a 4-device pipeline:
 
-<GPipeViz client:load />
+<GPipeViz client:visible />
 
 ## Efficiency Analysis
 
-Bubble fraction (wasted time):
+How much time is wasted in bubbles? The bubble fraction is:
 
 $$
 \text{Bubble} = \frac{2(K-1)}{2(K-1) + 2M} = \frac{K-1}{K-1+M}
 $$
 
-With $M \gg K$, bubbles become negligible. GPipe recommends $M \geq 4K$.
+You do not need to memorize the formula. The important idea is: **the more micro-batches you push through relative to the number of stages, the smaller the fraction of time lost to ramp-up and drain.** With $M \gg K$, bubbles become negligible. GPipe recommends $M \geq 4K$.
 
 ## Memory Optimization
 
-GPipe uses **activation recomputation** (gradient checkpointing):
+More micro-batches in flight would normally mean storing more activations for the backward pass. GPipe avoids this with **activation recomputation** (also called gradient checkpointing):
 
 - Forward: Only store activations at partition boundaries
 - Backward: Recompute intermediate activations as needed
 
-This trades compute for memory, enabling larger models.
+This trades extra compute for less memory, enabling larger models.
 
 ## Synchronous Training
 
-Despite pipelining, GPipe maintains synchronous SGD semantics:
+A worry you might have: does all this pipelining change what the model learns? No. Despite pipelining, GPipe maintains synchronous SGD semantics:
 
 $$
 \theta_{t+1} = \theta_t - \eta \cdot \frac{1}{M}\sum_{m=1}^{M} \nabla_\theta \mathcal{L}_m
 $$
 
-Gradients are accumulated across micro-batches before the update.
+Gradients are accumulated across micro-batches before the update — mathematically the same update you would get from the full mini-batch on one giant device.
 
 ## Results
 
@@ -89,10 +101,26 @@ GPipe achieved 84.4% ImageNet accuracy with a 557M parameter AmoebaNet.
 
 ## Comparison with Data Parallelism
 
+Pipeline parallelism is not the only way to use many devices. **Data parallelism** copies the full model to every device and splits the *data* instead:
+
 | Aspect | Data Parallel | GPipe |
 |--------|--------------|-------|
 | Memory per device | Full model | 1/K model |
 | Communication | Gradient sync | Activation transfer |
 | Batch size | Scales with K | Independent of K |
 
-GPipe is complementary—can combine both approaches.
+GPipe is complementary — real large-scale training systems combine both approaches.
+
+## Common Confusion
+
+- **Micro-batch vs. mini-batch**: the mini-batch is the unit of one weight update; micro-batches are the smaller slices it is cut into purely for pipelining. Weights update once per mini-batch, not per micro-batch.
+- **Pipeline parallelism vs. data parallelism**: pipeline parallelism splits the *model* across devices; data parallelism splits the *data* and replicates the model.
+- **Pipelining does not change the math.** GPipe computes exactly the same gradients as ordinary synchronous training — it only changes the schedule.
+- **Activation recomputation is not an approximation** either; it recomputes exact values, spending compute to save memory.
+
+## Where To Go Next
+
+- Read [Backpropagation](/backpropagation) to understand the forward/backward structure the pipeline schedules.
+- Read [Scaling Laws](/scaling-laws) for why anyone wants models too big for one device in the first place.
+- Read [Transformer](/transformer) for the architecture that dominates large-scale distributed training.
+- Read [Adam](/adam) for the optimizer side of large-model training.

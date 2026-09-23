@@ -1,9 +1,12 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import '../../lib/motion';
+import { createRng } from '../../lib/rng';
 
 const GRID_SIZE = 20;
 
 function generateGrid(t: number): number[][] {
+  const random = createRng(54530 + t);
   const grid: number[][] = [];
   for (let i = 0; i < GRID_SIZE; i++) {
     const row: number[] = [];
@@ -11,7 +14,7 @@ function generateGrid(t: number): number[][] {
       if (t === 0) {
         row.push(i < GRID_SIZE / 2 ? 1 : 0);
       } else if (t >= 100) {
-        row.push(Math.random() > 0.5 ? 1 : 0);
+        row.push(random() > 0.5 ? 1 : 0);
       } else {
         const noise = Math.sin(i * 0.5 + t * 0.1) * Math.cos(j * 0.3 + t * 0.05);
         const structure = (i + j + t) % (Math.max(2, 20 - t / 5)) < (10 - t / 10) ? 1 : 0;

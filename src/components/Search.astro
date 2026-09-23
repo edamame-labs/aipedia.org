@@ -1,0 +1,84 @@
+---
+interface Props {
+  /** `inline` renders the box in the page flow; `dialog` renders inside the ⌘K overlay. */
+  variant?: 'inline' | 'dialog';
+}
+
+const { variant = 'inline' } = Astro.props;
+
+const inputId = `search-input-${variant}`;
+const listId = `search-results-${variant}`;
+---
+
+<div class="search-root w-full" data-search-root data-variant={variant}>
+  <div class="relative">
+    <svg
+      class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary pointer-events-none"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="1.5"
+        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+      />
+    </svg>
+    <input
+      id={inputId}
+      type="search"
+      role="combobox"
+      autocomplete="off"
+      aria-expanded="false"
+      aria-controls={listId}
+      aria-label="Search entries"
+      placeholder="Search entries…"
+      data-search-input
+      class="w-full pl-12 pr-10 py-4 rounded-xl bg-bg-secondary border border-border-strong focus:border-text outline-none transition-colors text-text placeholder:text-text-secondary"
+    />
+    <button
+      type="button"
+      data-search-clear
+      hidden
+      aria-label="Clear search"
+      class="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded text-text-secondary hover:text-text transition-colors"
+    >
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+
+  <div
+    id={listId}
+    role="listbox"
+    aria-label="Search results"
+    data-search-results
+    hidden
+    class:list={[
+      'text-left overflow-hidden',
+      variant === 'inline'
+        ? 'absolute left-0 right-0 mt-2 bg-bg border border-border rounded-xl z-50 shadow-xl'
+        : 'mt-3 max-h-[55vh] overflow-y-auto rounded-xl border border-border',
+    ]}
+  >
+  </div>
+
+  <p data-search-empty hidden class="mt-3 text-sm text-text-secondary text-center py-4">
+    No entries match that search.
+  </p>
+</div>
+
+<style>
+  .search-root {
+    position: relative;
+  }
+  /* the browser's built-in affordances duplicate our own clear button */
+  input[type='search']::-webkit-search-decoration,
+  input[type='search']::-webkit-search-results-button,
+  input[type='search']::-webkit-search-cancel-button {
+    display: none;
+  }
+</style>

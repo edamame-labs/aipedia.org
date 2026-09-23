@@ -15,24 +15,37 @@ resources:
 
 import { RelationalRNNViz } from '../../components/viz/RelationalRNNViz';
 
-**Relational Recurrent Neural Networks** combines the temporal processing of RNNs with the relational reasoning of attention mechanisms. The result is a memory system where memories can interact with each other.
+**Relational Recurrent Neural Networks** combine the step-by-step processing of RNNs with the relational reasoning of attention. Instead of one big memory vector, the model keeps several memory *slots* — and the slots can talk to each other using attention.
 
-## Motivation
+> Prerequisites: [Understanding LSTMs](/understanding-lstms) for gated memory, and the attention mechanism from [Attention Is All You Need](/attention-is-all-you-need). This page combines the two.
 
-Standard LSTMs have a fixed memory cell. But complex reasoning requires:
+## Why Students Should Care
+
+- It is a bridge architecture: half LSTM, half [Transformer](/transformer). Seeing both in one model clarifies what each ingredient contributes.
+- It shows *why* attention helps reasoning: some tasks need stored facts to be **compared**, not just stored.
+- The multi-slot memory idea connects to [Neural Turing Machines](/neural-turing-machines) and to how we think about memory in agents today.
+
+## The Motivating Problem
+
+Suppose a model reads: "Ball A is 3m away. Ball B is 7m away. Ball C is 5m away. Which ball is second farthest?"
+
+A standard LSTM squeezes everything into one fixed memory cell. It can *store* the three distances (roughly), but answering requires **comparing stored facts against each other** — an operation the LSTM cell simply does not have. Complex reasoning needs:
+
 - Multiple pieces of information stored simultaneously
 - Interactions *between* stored memories
 - Dynamic retrieval based on relationships
 
 ## Relational Memory Core (RMC)
 
-The RMC maintains multiple memory slots $M = [m_1, m_2, ..., m_N]$ that interact via attention:
+The fix: keep a set of memory slots $M = [m_1, m_2, ..., m_N]$, and at every timestep let the slots update each other using attention:
 
 $$
 M^{t+1} = \text{MHDPA}(M^t) + \text{MLP}(\text{MHDPA}(M^t))
 $$
 
-where MHDPA is Multi-Head Dot Product Attention.
+where MHDPA is Multi-Head Dot Product Attention — the same attention used in Transformers.
+
+You do not need to memorize the equation. The important idea is: **each memory slot looks at all the other slots and updates itself based on what it finds** — exactly like tokens attending to each other in a Transformer, but applied to memories instead.
 
 ## Key Innovation
 
@@ -42,23 +55,23 @@ $$
 A = \text{softmax}\left(\frac{M W_Q (M W_K)^T}{\sqrt{d_k}}\right) M W_V
 $$
 
-This allows reasoning about relationships between stored facts.
+This is standard query-key-value attention where the queries, keys, and values all come from the memory matrix itself. It is what lets the model compare "ball A's distance" against "ball B's distance" internally.
 
 ## Interactive Demo
 
 Watch memory slots interact via attention:
 
-<RelationalRNNViz client:load />
+<RelationalRNNViz client:visible />
 
 ## Gating Mechanism
 
-Like LSTMs, RMC uses gates for stable updates:
+Attention alone would happily overwrite everything each step. Like LSTMs, the RMC uses gates to blend the new attended memory with the old one:
 
 $$
 \tilde{M} = \sigma(W_g[\tilde{A}; M]) \odot \tilde{A} + (1 - \sigma(W_g[\tilde{A}; M])) \odot M
 $$
 
-This prevents catastrophic forgetting of important memories.
+The takeaway: a learned gate decides, per element, how much of the freshly-computed memory to accept and how much of the old memory to keep — preventing catastrophic forgetting of important facts.
 
 ## Architecture
 
@@ -82,7 +95,7 @@ Input → Linear projection → Concatenate with memories
 
 ### Program Evaluation (Nth Farthest)
 
-Task: Given N objects, find the Nth farthest from a query.
+Task: given N objects, find the Nth farthest from a query — a pure relational-comparison task.
 
 | Model | Accuracy |
 |-------|----------|
@@ -90,18 +103,35 @@ Task: Given N objects, find the Nth farthest from a query.
 | DNC | 37% |
 | **RMC** | **91%** |
 
+The gap on Nth Farthest is the headline: when the task is *all* comparison, memory interaction is not a nice-to-have — it is the difference between failing and solving it.
+
 ## Why It Works
 
-1. **Multiple memories**: Can store several facts
-2. **Memory interaction**: Facts can "talk" to each other
-3. **Attention routing**: Dynamic retrieval based on relevance
-4. **Temporal integration**: Processes sequences naturally
+1. **Multiple memories**: can store several facts side by side
+2. **Memory interaction**: facts can "talk" to each other via attention
+3. **Attention routing**: retrieval is dynamic, based on relevance
+4. **Temporal integration**: still processes sequences step by step like an RNN
 
 ## Connection to Transformers
 
-RMC anticipated key Transformer ideas:
+RMC uses key Transformer ingredients:
+
 - Multi-head attention
 - Residual connections
 - Layer normalization
 
-The main difference: RMC processes sequences recurrently, while Transformers process in parallel.
+The main difference: RMC processes sequences recurrently (one step at a time, with a fixed number of memory slots), while Transformers process all positions in parallel.
+
+## Common Confusion
+
+- **Relational RNN vs. [Relation Networks](/relational-reasoning)**: same lab, related idea, different mechanism. Relation Networks compare all pairs of *objects in a single input*; the RMC lets *memory slots* interact *across time*.
+- **Not a Transformer with extra steps**: the RMC is still recurrent — it has a bounded memory that persists across timesteps, whereas a Transformer re-reads the whole sequence.
+- **Slots vs. cell state**: an LSTM has one memory vector updated by gates; the RMC has $N$ memory vectors updated by attention *and* gates.
+
+## Where To Go Next
+
+- Read [Relational Reasoning](/relational-reasoning) for the pairwise-comparison idea in its simplest form.
+- Read [Understanding LSTMs](/understanding-lstms) for the gating machinery the RMC borrows.
+- Read [Attention Is All You Need](/attention-is-all-you-need) for the attention machinery it borrows.
+- Read [Neural Turing Machines](/neural-turing-machines) for an earlier take on slot-based external memory.
+- Read [Transformer](/transformer) for the architecture that ultimately won by dropping recurrence entirely.

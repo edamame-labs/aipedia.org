@@ -1,10 +1,13 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import '../../lib/motion';
+import { createRng } from '../../lib/rng';
 
 function generateWeights(n: number, noiseLevel: number): number[] {
+  const random = createRng(11003 + Math.round(noiseLevel * 1000));
   return Array.from({ length: n }, () => {
-    const base = (Math.random() - 0.5) * 2;
-    return base + (Math.random() - 0.5) * noiseLevel * 0.5;
+    const base = (random() - 0.5) * 2;
+    return base + (random() - 0.5) * noiseLevel * 0.5;
   });
 }
 
@@ -13,6 +16,10 @@ export function MDLWeightsViz() {
   const [precision, setPrecision] = useState(8);
 
   const weights = useMemo(() => generateWeights(50, noiseLevel), [noiseLevel]);
+  const jitter = useMemo(() => {
+    const random = createRng(52217 + Math.round(noiseLevel * 1000));
+    return weights.map(() => random() * noiseLevel * 20);
+  }, [weights, noiseLevel]);
 
   const bitsPerWeight = precision;
   const totalBits = weights.length * bitsPerWeight;
@@ -60,7 +67,7 @@ export function MDLWeightsViz() {
         <div className="flex items-end justify-center gap-px h-24">
           {weights.map((w, i) => {
             const height = Math.abs(w) * 40 + 5;
-            const noise = Math.random() * noiseLevel * 20;
+            const noise = jitter[i];
             return (
               <motion.div
                 key={i}

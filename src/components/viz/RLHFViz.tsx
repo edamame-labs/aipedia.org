@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import '../../lib/motion';
 
 const STAGES = [
   { name: 'SFT', description: 'Supervised Fine-Tuning on demonstrations' },

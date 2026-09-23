@@ -15,9 +15,19 @@ resources:
 
 import { OrderMattersViz } from '../../components/viz/OrderMattersViz';
 
-**Order Matters: Sequence to Sequence for Sets** addresses a fundamental question: how should seq2seq models handle inputs or outputs that are inherently unordered sets?
+**Order Matters: Sequence to Sequence for Sets** asks a deceptively simple question: sequence models require you to feed elements in *some* order — so what happens when the data is really a **set**, with no natural order at all? The answer: the order you pick genuinely changes what the model learns, and there are architectures that fix this.
 
-## The Problem
+> This page builds on [Seq2Seq](/seq2seq) and [Pointer Networks](/pointer-networks). Read those first if the terms "encoder-decoder" or "pointer" are new.
+
+## Why Students Should Care
+
+- Lots of real data is set-shaped — point clouds, tags, detected objects — and pretending sets are sequences quietly hurts your model.
+- The paper's fix, attention-based order-invariant processing, is an early blueprint for what [Transformers](/transformer) later made standard.
+- It teaches a subtle general lesson: choices that look like formatting details (how you order your data) are actually part of your model design.
+
+## The Problem, in Plain English
+
+An LSTM reads its input one element at a time, so *something* has to come first. But if your input is the set of points A, B, and C, feeding "A, B, C" versus "C, A, B" should not change the answer — the set is the same. In practice, it does change the answer, because the model's hidden state depends on the order it read things.
 
 Standard seq2seq models assume ordered sequences. But many tasks involve **sets**:
 
@@ -25,11 +35,11 @@ Standard seq2seq models assume ordered sequences. But many tasks involve **sets*
 - **Output sets**: Predicted tags, detected objects
 - **Both**: Sorting (input set → output sequence)
 
-Naively treating sets as sequences introduces spurious ordering dependencies.
+Naively treating sets as sequences introduces spurious ordering dependencies — the model wastes capacity learning to cope with orderings that never should have mattered.
 
 ## Input Order Sensitivity
 
-Experiment: Sort numbers using seq2seq.
+Experiment: sort numbers using seq2seq. The same set, presented in different orders, can succeed or fail:
 
 | Input Order | Output |
 |-------------|--------|
@@ -37,28 +47,30 @@ Experiment: Sort numbers using seq2seq.
 | [1, 2, 3, 4] | [1, 2, 3, 4] ✓ |
 | [4, 3, 2, 1] | [1, 2, 3, ?] ✗ |
 
-Different input orderings can lead to different (wrong) outputs!
+Different input orderings can lead to different (wrong) outputs — even though logically the task is identical.
 
 ## Interactive Demo
 
 Explore how input order affects set processing:
 
-<OrderMattersViz client:load />
+<OrderMattersViz client:visible />
 
 ## Solution: Read-Process-Write
 
-The paper proposes a three-phase architecture:
+The paper proposes a three-phase architecture. The trick: replace "read the elements in order" with "look at all elements through attention", which is order-invariant by construction.
 
 ### 1. Read
 
-Embed all input elements:
+Embed all input elements independently (no order involved yet):
+
 $$
 \{e_1, e_2, ..., e_n\} = \text{Embed}(x_1, x_2, ..., x_n)
 $$
 
 ### 2. Process
 
-Use attention to create order-invariant representation:
+An LSTM repeatedly *attends over the whole set* instead of consuming elements one by one:
+
 $$
 q_t = \text{LSTM}(q_{t-1})
 $$
@@ -69,24 +81,25 @@ $$
 r_t = \sum_i \alpha_i e_i
 $$
 
-Multiple processing steps refine the representation.
+The weighted sum $r_t$ is the same no matter how you shuffle the elements — that is where the order-invariance comes from. Multiple processing steps refine the representation.
 
 ### 3. Write
 
-Generate output sequence with pointer network:
+Generate the output sequence with a [pointer network](/pointer-networks), selecting input elements one at a time:
+
 $$
 p(y_i | y_{<i}, M) = \text{Attention}(s_i, M)
 $$
 
 ## Output Order Learning
 
-For tasks where output order matters but isn't predetermined:
+Some tasks have output *sets* too — the correct answer is a collection, but the model must emit it in some order. Which order should the training data use? The paper's answer: let the model search for the ordering that is easiest to learn:
 
 $$
 \mathcal{L} = \min_{\pi \in S_n} \sum_i -\log p(y_{\pi(i)} | y_{\pi(<i)})
 $$
 
-Search over permutations to find the easiest ordering to learn.
+In words: among all permutations of the target output, train against the one the model currently finds most probable.
 
 ## Key Results
 
@@ -100,17 +113,34 @@ Search over permutations to find the easiest ordering to learn.
 
 ### Convex Hull
 
-Sorting input points by angle dramatically improved performance—demonstrating that "natural" orderings help learning.
+Sorting input points by angle dramatically improved performance — demonstrating that "natural" orderings help learning even when the task is order-free in principle.
 
 ## Implications
 
 1. **Order is a hyperparameter**: Choice of ordering affects learning
-2. **Attention enables invariance**: Self-attention over sets removes order dependence  
+2. **Attention enables invariance**: Attention over sets removes order dependence
 3. **Output order matters**: Some orderings are easier to learn than others
 
 ## Connection to Transformers
 
 The Read-Process-Write architecture anticipated:
+
 - **Set attention** (now standard in Transformers)
 - **Iterative refinement** (multiple attention layers)
 - **Permutation invariance** (via attention aggregation)
+
+A [Transformer](/transformer) encoder without positional encodings is essentially a permutation-invariant set processor — the same core insight, scaled up.
+
+## Common Confusion
+
+- **"Order matters" — for what?** The title means input/output *element ordering* affects seq2seq training. It is not about word order in language.
+- **Set vs. sequence**: a sequence has meaningful positions ("first", "second"); a set does not. The bug this paper diagnoses is feeding sets into models that assume positions mean something.
+- **Order Matters vs. [Pointer Networks](/pointer-networks)**: Pointer Networks (same lead author) give models an input-sized output vocabulary; this paper studies ordering effects and *uses* a pointer network as its Write phase.
+- **Invariance from attention vs. from sorting**: the paper offers two remedies — an architecture that ignores order (attention), and picking a good canonical order (e.g., sort by angle). Both work; they are different strategies.
+
+## Where To Go Next
+
+- Read [Pointer Networks](/pointer-networks) for the output mechanism used in the Write phase.
+- Read [Seq2Seq](/seq2seq) for the baseline architecture whose assumptions this paper questions.
+- Read [Transformer](/transformer) and [Attention Is All You Need](/attention-is-all-you-need) to see set attention become the dominant paradigm.
+- Read [Bahdanau Attention](/bahdanau-attention) for the original attention mechanism.

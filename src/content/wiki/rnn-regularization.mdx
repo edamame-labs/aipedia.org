@@ -15,21 +15,29 @@ resources:
 
 import { DropoutViz } from '../../components/viz/DropoutViz';
 
-**Recurrent Neural Network Regularization** solved a critical problem: standard dropout doesn't work well in RNNs. This paper by Zaremba, Sutskever, and Vinyals showed how to apply dropout correctly to LSTMs.
+**Recurrent Neural Network Regularization** is the paper by Zaremba, Sutskever, and Vinyals that solved an annoying practical problem: standard dropout, the go-to trick for preventing overfitting, breaks RNNs. Their fix — drop only the "vertical" connections, never the "horizontal" memory path — became the standard recipe.
 
-## The Problem
+> Prerequisites: know what [dropout](/dropout) is and how an [LSTM](/understanding-lstms) carries memory across timesteps. Both pages are short.
 
-Naively applying dropout to recurrent connections causes issues:
+## Why Students Should Care
+
+- LSTMs of this era overfit badly; without a working regularizer they had to be kept small. This paper let people train much larger recurrent models.
+- It teaches a transferable lesson: **where** you apply a regularizer matters as much as whether you apply it.
+- The "protect the memory path" insight echoes through later designs — residual streams in [Transformers](/transformer) are similarly kept clean.
+
+## The Problem: Dropout Noise Compounds Over Time
+
+Dropout randomly zeroes activations during training. In a feedforward net, each activation gets zapped at most once per forward pass — no big deal. But an RNN reuses its hidden state at *every* timestep. Naively dropping the recurrent connection looks like this:
 
 $$
 h_t = f(W_h \cdot \text{dropout}(h_{t-1}) + W_x \cdot x_t)
 $$
 
-The dropout noise accumulates over time, destroying the network's ability to retain long-term information.
+Now the memory gets corrupted by fresh noise at every single step. Over a 100-step sequence, that is 100 rounds of damage — the network can no longer retain long-term information, which was the whole point of using an LSTM.
 
-## The Solution
+## The Solution: Only Drop the Non-Recurrent Connections
 
-Apply dropout only to **non-recurrent connections**:
+Apply dropout on the way *into* and *out of* each layer, but leave the timestep-to-timestep path untouched:
 
 $$
 h_t = f(W_h \cdot h_{t-1} + W_x \cdot \text{dropout}(x_t))
@@ -39,7 +47,7 @@ $$
 y_t = \text{dropout}(h_t)
 $$
 
-The recurrent path $h_{t-1} \rightarrow h_t$ remains clean, preserving memory.
+The recurrent path $h_{t-1} \rightarrow h_t$ remains clean, preserving memory. Information still gets regularized — but only once per layer it passes through, not once per timestep.
 
 ## Where to Apply Dropout
 
@@ -50,15 +58,17 @@ The recurrent path $h_{t-1} \rightarrow h_t$ remains clean, preserving memory.
 | Hidden → Output | ✓ Yes |
 | Between LSTM layers | ✓ Yes |
 
+One rule of thumb captures the whole paper: **drop vertical arrows, never horizontal ones**.
+
 ## Interactive Demo
 
 Visualize how dropout randomly masks neurons during training:
 
-<DropoutViz client:load />
+<DropoutViz client:visible />
 
 ## LSTM-Specific Details
 
-For multi-layer LSTMs, dropout is applied:
+For multi-layer LSTMs, dropout is applied between layers:
 
 ```
 Layer 1: dropout(x) → LSTM → h1
@@ -71,7 +81,7 @@ Within each LSTM cell, the recurrent connections remain untouched.
 
 ## Results
 
-On Penn Treebank word-level language modeling:
+On Penn Treebank word-level language modeling (lower perplexity = better):
 
 | Model | Perplexity |
 |-------|------------|
@@ -79,24 +89,33 @@ On Penn Treebank word-level language modeling:
 | LSTM (naive dropout) | Diverges |
 | LSTM (this paper) | **78.4** |
 
-Proper dropout reduces perplexity by 35%.
+Proper dropout reduces perplexity by 35% — and note that naive dropout is not just worse, it fails to train at all.
 
 ## Mathematical Formulation
 
-During training with dropout rate $p$:
+During training with dropout rate $p$, kept activations are rescaled:
 
 $$
 \tilde{h}_t^l = \text{dropout}(h_t^l, p) \cdot \frac{1}{1-p}
 $$
 
-The scaling factor ensures expected values match at test time.
+The scaling factor ensures expected values match at test time, so you can turn dropout off for inference without recalibrating anything.
 
 ## Key Insights
 
-1. **Dropout placement matters**: Recurrent connections need clean gradients
-2. **Same mask per sequence**: Use consistent dropout mask across timesteps
-3. **Higher dropout for deeper networks**: More layers allow more regularization
+1. **Dropout placement matters**: the recurrent path needs to stay clean so memory and gradients survive
+2. **Same mask per sequence**: use a consistent dropout mask across timesteps rather than resampling each step
+3. **Higher dropout for deeper networks**: more layers tolerate — and benefit from — more regularization
 
-## Legacy
+## Common Confusion
 
-This paper established best practices for RNN regularization that remained standard until Transformers. The insight that different connection types need different treatment influenced later work on attention dropout and layer normalization.
+- **This is not "no dropout in RNNs"**: dropout works great in RNNs — just on the input, output, and between-layer connections, not on the hidden-to-hidden loop.
+- **Regularization vs. architecture**: this paper changes *training*, not the LSTM cell itself. The model at test time is a plain LSTM.
+- **Later variants exist**: "variational dropout" (Gal and Ghahramani) later showed a principled way to drop recurrent connections using one fixed mask per sequence; this paper's simpler recipe was the established baseline.
+
+## Where To Go Next
+
+- Read [Dropout](/dropout) for the original technique and why randomly deleting neurons prevents overfitting.
+- Read [Understanding LSTMs](/understanding-lstms) for the memory dynamics this paper is careful not to break.
+- Read [RNN Effectiveness](/rnn-effectiveness) for the kind of language models this recipe made trainable at scale.
+- Read [Layer Normalization](/layer-normalization) for another technique adapted specially for recurrent networks.

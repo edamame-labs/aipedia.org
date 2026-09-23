@@ -27,68 +27,86 @@ resources:
 
 import { BackpropViz } from '../../components/viz/BackpropViz';
 
-**Backpropagation** is the algorithm that makes deep learning possible. It efficiently computes gradients of the loss with respect to every parameter in a neural network, enabling gradient-based optimization.
+**Backpropagation** is the algorithm that makes deep learning possible. It efficiently computes, for every weight in a neural network, how much a small change in that weight would change the loss — and it does so in roughly one extra pass through the network.
+
+> This page assumes you know what a neural network layer is and what a loss function measures. If "gradient" is unfamiliar, think of it as "the direction and amount to nudge a number to reduce the loss."
+
+## Why Students Should Care
+
+- Every training run of every modern neural network — CNNs, Transformers, diffusion models — uses backpropagation under the hood.
+- When you call `loss.backward()` in PyTorch, this is the algorithm that runs. Understanding it demystifies your framework.
+- Classic training problems (vanishing gradients, exploding gradients) and their fixes (ReLU, residual connections, normalization) only make sense once you understand how gradients flow backward.
 
 ## The Core Problem
 
-To train a neural network, we need:
+Training means adjusting weights to reduce the loss. To know which way to adjust each weight, we need:
 
 $$
 \frac{\partial L}{\partial w_i} \quad \text{for every weight } w_i
 $$
 
-Naively computing each gradient separately would be prohibitively expensive. Backpropagation does it efficiently.
+A network can have millions of weights. Naively computing each gradient separately — for example, by nudging one weight at a time and re-running the network — would be prohibitively expensive. Backpropagation gets **all** of the gradients efficiently by reusing shared work.
 
 ## The Chain Rule
 
-Backpropagation is just the chain rule applied systematically:
+Here is the whole trick: backpropagation is just the chain rule from calculus, applied systematically.
 
 $$
 \frac{\partial L}{\partial x} = \frac{\partial L}{\partial y} \cdot \frac{\partial y}{\partial x}
 $$
 
-If $y = f(x)$ and $L = g(y)$, we can compute $\frac{\partial L}{\partial x}$ from $\frac{\partial L}{\partial y}$ and local gradient $\frac{\partial y}{\partial x}$.
+If $y = f(x)$ and $L = g(y)$, we can compute $\frac{\partial L}{\partial x}$ from $\frac{\partial L}{\partial y}$ and the local gradient $\frac{\partial y}{\partial x}$.
+
+In words: if you already know how the loss reacts to $y$, and you know how $y$ reacts to $x$, multiply them to get how the loss reacts to $x$. Chain this through every layer, from the loss back to the input, and you get every gradient in the network.
 
 ## Forward and Backward Pass
 
+Training a network is a two-phase loop.
+
 ### Forward Pass
-Compute outputs layer by layer:
+
+First, compute outputs layer by layer, exactly as when making a prediction:
 
 $$
 z^{(l)} = W^{(l)} a^{(l-1)} + b^{(l)}, \quad a^{(l)} = \sigma(z^{(l)})
 $$
 
-Store activations for the backward pass.
+Store the activations along the way — the backward pass will need them.
 
 ### Backward Pass
-Propagate gradients from output to input:
+
+Then propagate gradients from the output back toward the input. Each layer receives "how the loss reacts to my output" and produces "how the loss reacts to my input":
 
 $$
 \delta^{(l)} = \frac{\partial L}{\partial z^{(l)}} = \left( (W^{(l+1)})^T \delta^{(l+1)} \right) \odot \sigma'(z^{(l)})
 $$
 
-Then compute weight gradients:
+Then compute the weight gradients from the layer's error signal and its stored input:
 
 $$
 \frac{\partial L}{\partial W^{(l)}} = \delta^{(l)} (a^{(l-1)})^T
 $$
 
+You do not need to memorize these equations. The important idea is: **each layer combines the error signal arriving from the layer above with its own stored activations, producing both its weight gradients and the error signal to pass further back.**
+
 ## Interactive Visualization
 
 Watch gradients flow backward through a network:
 
-<BackpropViz client:load />
+<BackpropViz client:visible />
 
 ## Computational Graph View
 
-Modern frameworks represent computation as a **directed acyclic graph**:
+Modern frameworks generalize this beyond simple layer stacks. They represent any computation as a **directed acyclic graph** of operations:
 
-1. **Forward**: Traverse graph, compute outputs
+1. **Forward**: Traverse the graph, compute outputs
 2. **Backward**: Traverse in reverse, accumulate gradients
 
 Each node stores:
 - Forward function: $y = f(x_1, \ldots, x_n)$
 - Backward function: $\frac{\partial L}{\partial x_i}$ given $\frac{\partial L}{\partial y}$
+
+This is why you can write nearly arbitrary code in PyTorch or JAX and still get gradients: every operation knows its own local derivative, and the framework chains them for you.
 
 ## Common Layer Gradients
 
@@ -99,22 +117,26 @@ Each node stores:
 | Softmax+CE | $L = -\log p_c$ | $\frac{\partial L}{\partial z} = p - y$ |
 | BatchNorm | $y = \gamma \hat{x} + \beta$ | (complex, involves batch statistics) |
 
+Notice how simple most of these are: ReLU's backward pass just zeroes out gradients where the input was negative.
+
 ## Vanishing/Exploding Gradients
 
-Deep networks can suffer from:
+Backprop multiplies many local gradients together. In a deep network, the gradient reaching the earliest layer is a long product:
 
 $$
 \frac{\partial L}{\partial w^{(1)}} = \prod_{l=2}^{L} \frac{\partial z^{(l)}}{\partial z^{(l-1)}} \cdot \frac{\partial L}{\partial z^{(L)}}
 $$
 
-If factors < 1: **vanishing gradients** (early layers don't learn)
-If factors > 1: **exploding gradients** (unstable training)
+Long products of numbers behave badly:
 
-**Solutions**: ReLU, residual connections, careful initialization, normalization.
+- If the factors are less than 1: **vanishing gradients** (early layers barely learn)
+- If the factors are greater than 1: **exploding gradients** (unstable training)
+
+**Solutions**: ReLU, residual connections, careful initialization, normalization. Much of modern architecture design exists to keep this product well-behaved.
 
 ## Automatic Differentiation
 
-Modern frameworks (PyTorch, JAX) implement backprop automatically:
+Modern frameworks (PyTorch, JAX) implement backprop automatically — you write the forward pass, they derive the backward pass:
 
 ```python
 # Forward
@@ -134,3 +156,17 @@ Backpropagation is:
 - **Efficient**: $O(n)$ gradient computation for $n$ parameters
 - **General**: Works for any differentiable computation graph
 - **Foundational**: Enables all modern deep learning
+
+## Common Confusion
+
+- **Backpropagation is not a training algorithm by itself.** It only computes gradients. An optimizer (SGD, [Adam](/adam)) then decides how to use them to update the weights.
+- **Backprop is not specific to neural networks.** It is reverse-mode automatic differentiation, applicable to any differentiable program.
+- **The backward pass is not a second "reverse network."** It reuses the same weights and the activations stored during the forward pass.
+- **"Gradient descent" and "backpropagation" are different things**: gradient descent is the update rule; backprop is how the gradients for that rule are computed.
+
+## Where To Go Next
+
+- Read [Adam](/adam) for what happens to the gradients after backprop computes them.
+- Read [Batch Normalization](/batch-normalization) and [Layer Normalization](/layer-normalization) for techniques that keep gradients well-scaled in deep networks.
+- Read [ResNet](/resnet) for how residual connections solved gradient flow in very deep networks.
+- Read [Understanding LSTMs](/understanding-lstms) for how recurrent networks confronted vanishing gradients across time.

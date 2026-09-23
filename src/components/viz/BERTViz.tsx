@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import '../../lib/motion';
+import { createRng } from '../../lib/rng';
 
 const SENTENCE = ['The', 'cat', 'sat', 'on', 'the', '[MASK]', '.'];
 const PREDICTIONS = ['mat', 'floor', 'ground', 'rug', 'bed'];
@@ -13,11 +15,12 @@ export function BERTViz() {
   const maskIndex = SENTENCE.indexOf('[MASK]');
 
   const attentionWeights = useMemo(() => {
+    const random = createRng(88014);
     return SENTENCE.map((_, i) => {
       if (i === maskIndex) return SENTENCE.map(() => 0.14);
       const weights = SENTENCE.map((_, j) => {
         if (j === maskIndex) return 0.3;
-        return 0.1 + Math.random() * 0.1;
+        return 0.1 + random() * 0.1;
       });
       const sum = weights.reduce((a, b) => a + b, 0);
       return weights.map(w => w / sum);

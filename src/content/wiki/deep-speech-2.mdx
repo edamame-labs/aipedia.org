@@ -15,28 +15,40 @@ resources:
 
 import { DeepSpeechViz } from '../../components/viz/DeepSpeechViz';
 
-**Deep Speech 2** demonstrated that end-to-end deep learning could match or exceed traditional speech recognition systems. By scaling RNNs and using CTC loss, it achieved state-of-the-art results in both English and Mandarin.
+**Deep Speech 2** is the 2015 Baidu paper that showed a single neural network — trained end-to-end on raw audio and text — could match or beat traditional speech recognition systems built from hand-engineered components. The same architecture worked for both English and Mandarin.
 
-## End-to-End Architecture
+> Helpful background: [Understanding LSTMs](/understanding-lstms) for recurrent networks and [Batch Normalization](/batch-normalization) for the training trick this paper extends.
 
-The system maps spectrograms directly to text:
+## Why Students Should Care
+
+- It is one of the clearest early demonstrations of the "end-to-end beats pipelines" lesson that now dominates deep learning.
+- Its scaling story — more data and deeper networks keep helping — foreshadows the [Scaling Laws](/scaling-laws) that later shaped language models.
+- Modern speech systems like Whisper and Wav2Vec are direct descendants of this line of work.
+
+## The Old Way vs. the New Way
+
+Traditional speech recognizers were pipelines: an acoustic model mapped audio to phonemes (sound units), a pronunciation dictionary mapped phonemes to words, and a language model stitched words together. Each stage was engineered separately, often per-language.
+
+Deep Speech 2 replaces the whole pipeline with one network that maps spectrograms directly to text:
 
 $$
 \text{Audio} \rightarrow \text{Spectrogram} \rightarrow \text{RNN} \rightarrow \text{CTC} \rightarrow \text{Text}
 $$
 
-No phonemes, no pronunciation dictionaries—just raw audio to text.
+No phonemes, no pronunciation dictionaries — just raw audio in, characters out.
 
 ## The Model
 
-1. **Input**: Power spectrogram of audio
+1. **Input**: power spectrogram of audio (a picture of which frequencies are loud over time)
 2. **Convolution**: 1-3 conv layers for feature extraction
 3. **Recurrent**: 5-7 bidirectional RNN layers (GRU or LSTM)
-4. **Output**: Softmax over characters + CTC blank token
+4. **Output**: softmax over characters + a special CTC blank token
 
 ## CTC Loss
 
-Connectionist Temporal Classification allows training without frame-level alignment:
+Here is the core problem CTC solves: audio has thousands of time frames, but the transcript has only a few dozen characters, and nobody tells the network *which* frames correspond to *which* character.
+
+**Connectionist Temporal Classification (CTC)** allows training without that frame-level alignment:
 
 $$
 P(y|x) = \sum_{\pi \in \mathcal{B}^{-1}(y)} P(\pi|x)
@@ -44,39 +56,45 @@ $$
 
 where $\mathcal{B}$ collapses repeated characters and removes blanks.
 
+You do not need to memorize the equation. The idea is: **sum the probability of every possible frame-by-frame alignment that spells out the target text, and train the network to make that total large.** The network figures out the alignment on its own.
+
 ## Interactive Demo
 
 Explore the Deep Speech 2 pipeline:
 
-<DeepSpeechViz client:load />
+<DeepSpeechViz client:visible />
 
 ## Key Innovations
 
 ### Batch Normalization for RNNs
 
-Applied to recurrent layers (a non-trivial extension):
+[Batch normalization](/batch-normalization) was standard for feedforward nets, but applying it inside recurrent layers is a non-trivial extension:
 
 $$
 h_t = \text{BN}(W \cdot [h_{t-1}, x_t])
 $$
 
-This enabled training much deeper networks.
+This enabled training much deeper recurrent networks.
 
 ### SortaGrad
 
-Curriculum learning strategy:
-1. First epoch: Sort utterances by length (shortest first)
-2. Subsequent epochs: Random order
+A curriculum learning strategy — start easy, then mix it up:
 
-This stabilizes early training with CTC.
+1. First epoch: sort utterances by length (shortest first)
+2. Subsequent epochs: random order
+
+Short clips give cleaner gradients early on, which stabilizes CTC training.
 
 ### Model Parallelism
 
 Distributed training across multiple GPUs:
+
 - Data parallelism for batches
 - Model parallelism for large layers
 
 ## Results
+
+Word error rate (WER — the fraction of words the system gets wrong; lower is better):
 
 | Language | Test Set | WER |
 |----------|----------|-----|
@@ -89,6 +107,7 @@ Achieved near-human performance on clean speech.
 ## Scaling Laws
 
 The paper demonstrated:
+
 - More data → better results (up to 12,000 hours)
 - Deeper networks → better results (up to 7 RNN layers)
 - Both English and Mandarin benefit similarly from scale
@@ -96,13 +115,28 @@ The paper demonstrated:
 ## Why This Matters
 
 Deep Speech 2 showed that:
-1. **End-to-end wins**: No need for hand-designed pipelines
-2. **Scale matters**: More data and compute beat clever engineering
-3. **Transfer works**: Same architecture for different languages
+
+1. **End-to-end wins**: no need for hand-designed pipelines
+2. **Scale matters**: more data and compute beat clever engineering
+3. **Transfer works**: the same architecture handles very different languages
 
 ## Legacy
 
 This work influenced:
+
 - Modern speech systems (Whisper, Wav2Vec)
 - End-to-end paradigm adoption
 - Large-scale data collection for speech
+
+## Common Confusion
+
+- **Deep Speech 2 vs. Deep Speech 1**: same end-to-end philosophy; version 2 scales it up (deeper networks, far more data), adds batch norm for RNNs and SortaGrad, and extends to Mandarin.
+- **CTC vs. seq2seq attention**: CTC assumes a monotonic, frame-aligned relationship between audio and text. [Seq2seq](/seq2seq) models with attention are a different way to handle unaligned input/output pairs, and later replaced CTC in many systems.
+- **Characters, not phonemes**: the network outputs letters directly. The absence of a phoneme stage is the whole point of "end-to-end."
+
+## Where To Go Next
+
+- Read [Understanding LSTMs](/understanding-lstms) for the recurrent layers at the heart of the model.
+- Read [Batch Normalization](/batch-normalization) for the technique this paper extended to RNNs.
+- Read [Seq2seq](/seq2seq) for the alternative encoder-decoder approach to sequence transduction.
+- Read [Scaling Laws](/scaling-laws) to see the "more data, bigger model" story made quantitative for language models.

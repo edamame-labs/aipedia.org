@@ -37,7 +37,7 @@ Visit `http://localhost:4321`
 
    import { MyViz } from '../../components/viz/MyViz';
 
-   <MyViz client:load />
+   <MyViz client:visible />
    ```
 
 2. Build the visualization in `src/components/viz/`.
@@ -61,6 +61,7 @@ Entry pages also have "Copy as Markdown", "Ask Claude", and "Ask ChatGPT" links.
 - **Tailwind CSS** - Styling
 - **Framer Motion** - Animations
 - **Recharts** - Charts
+- **KaTeX** - Math typesetting (self-hosted)
 
 ## Structure
 
@@ -69,12 +70,15 @@ src/
 ├── content/wiki/     # MDX entries
 ├── components/viz/   # Interactive visualizations
 ├── components/       # Index and card components
-├── lib/              # Collection helpers and labels
+├── lib/              # Collection helpers, labels, search ranking, seeded RNG, motion
 ├── layouts/          # Page templates
-└── pages/            # Routes
+├── scripts/          # Client-side behaviour (search, index filters)
+└── pages/            # Routes, plus rss.xml / robots.txt / search-index.json / llms.txt
 scripts/              # Preview capture
 public/thumbs/        # Card previews
 ```
+
+See `AGENTS.md` for the conventions this codebase relies on.
 
 ## License
 

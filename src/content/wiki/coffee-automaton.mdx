@@ -15,33 +15,43 @@ resources:
 
 import { CoffeeAutomatonViz } from '../../components/viz/CoffeeAutomatonViz';
 
-**The Coffee Automaton** paper by Aaronson et al. provides a formal model for the phenomenon described in "The First Law of Complexodynamics"—why complexity rises, peaks, and falls while entropy only increases.
+**The Coffee Automaton** paper by Aaronson, Carroll, and Ouellette takes an everyday observation — cream stirred into coffee forms beautiful swirls before dissolving into boring uniformity — and turns it into a theorem: in closed systems, complexity provably rises, peaks, and falls, even while entropy only rises.
+
+> This page is the formal follow-up to [The First Law of Complexodynamics](/complexodynamics), which poses the puzzle in blog form. Read that first for the setup, and [Kolmogorov Complexity](/kolmogorov-complexity) for the measurement tool both pages rely on.
+
+## Why Students Should Care
+
+- It demonstrates how to take a vague idea ("the universe got interesting before it gets boring") and make it precise enough to prove things about.
+- The measurement problem it solves — separating *meaningful structure* from *random noise* — is the same problem behind compression-based views of learning like [MDL](/mdl-tutorial).
+- The rise-and-fall pattern is a useful lens on neural network training dynamics (see below).
 
 ## The Model
 
-Consider a cellular automaton initialized in a "simple" state (like cream layered on coffee):
+Consider a cellular automaton initialized in a "simple" state — the digital version of cream layered on top of coffee:
 
 $$
 \text{Initial: } \underbrace{1111...1111}_{n/2}\underbrace{0000...0000}_{n/2}
 $$
 
-As the system evolves, it passes through complex intermediate states before reaching equilibrium.
+Cells then mix under simple local update rules. As the system evolves, it passes through intricate intermediate states before reaching a fully mixed equilibrium. The question: can we *prove* the middle is more complex than either end?
 
-## Measuring Complexity
+## Measuring Complexity: Sophistication
 
-The paper uses **sophistication** as a complexity measure:
+Plain [Kolmogorov complexity](/kolmogorov-complexity) will not work here — a fully mixed random state has the *highest* Kolmogorov complexity, but it is obviously not "complex" in the interesting sense. The paper instead uses **sophistication**:
 
 $$
 \text{Soph}(x) = \min\{K(S) : x \in S, K(x|S) \geq \log|S| - O(1)\}
 $$
 
-This captures "meaningful" structure—random strings are complex (high $K$) but not sophisticated (no structure).
+In words: find the simplest *set* $S$ that captures $x$'s structure, such that within $S$, $x$ looks like a typical random member. The sophistication of $x$ is the description length of that set.
+
+The takeaway: sophistication counts only the "interesting" part of a description — the structure — and charges nothing for the residual randomness. Random strings have high $K$ but low sophistication, because the set "all strings of length n" is simple.
 
 ## Interactive Demo
 
 Watch complexity rise and fall in a cellular automaton:
 
-<CoffeeAutomatonViz client:load />
+<CoffeeAutomatonViz client:visible />
 
 ## The Main Theorem
 
@@ -50,11 +60,12 @@ For a broad class of reversible cellular automata, there exist times $t_1$ and $
 $$
 \text{Soph}(x_{t_1}) \gg \text{Soph}(x_0)
 $$
+
 $$
 \text{Soph}(x_{t_2}) \ll \text{Soph}(x_{t_1})
 $$
 
-Complexity provably rises then falls.
+Complexity provably rises then falls. The blog-post intuition becomes a theorem once the right complexity measure is in hand.
 
 ## The Three Phases
 
@@ -66,34 +77,54 @@ Complexity provably rises then falls.
 
 ## Why This Happens
 
-**Initial state**: Described by a short program ("n/2 ones, n/2 zeros")
+**Initial state**: described by a short program ("n/2 ones, n/2 zeros") — simple.
 
-**Mixing state**: Complex patterns require specifying many details
+**Mixing state**: the partly-mixed patterns have real structure (tendrils, boundaries) that any faithful description must spell out — complex.
 
-**Final state**: Described as "sample from uniform distribution"
+**Final state**: described as "a sample from the uniform distribution" — simple again, because all the detail is now pure noise that sophistication does not charge for.
 
-The set of intermediate states is "special"—neither trivially ordered nor purely random.
+The set of intermediate states is "special" — neither trivially ordered nor purely random.
 
 ## Connection to Learning
 
-This dynamic appears in neural network training:
+A similar arc appears in neural network training:
 
-1. **Early**: Random weights, simple predictions
-2. **Middle**: Complex feature detectors emerge
-3. **Late**: Simplified, generalizable representations
+1. **Early**: random weights, simple predictions
+2. **Middle**: complex feature detectors emerge
+3. **Late**: simplified, generalizable representations
 
-Loss landscapes may follow similar complexity dynamics.
+Loss landscapes may follow similar complexity dynamics — a suggestive analogy, though not something this paper proves.
 
 ## Compression Perspective
+
+Any state's description splits into two parts:
 
 $$
 K(x) = K(\text{structure}) + K(\text{noise}|\text{structure})
 $$
 
 At peak complexity:
+
 - Non-trivial structure to describe
 - Non-trivial variation around that structure
 
 At equilibrium:
-- Structure is "uniform distribution" (simple)
+
+- The structure is just "uniform distribution" (simple)
 - Everything else is noise
+
+Sophistication tracks only the first term — which is exactly why it peaks in the middle.
+
+## Common Confusion
+
+- **Complexity is not entropy**: entropy rises monotonically the whole time; sophistication rises *and falls*. The final state has maximum entropy and near-minimum sophistication.
+- **This paper vs. [Complexodynamics](/complexodynamics)**: Aaronson's blog post poses the question and sketches "complextropy"; this paper builds the concrete automaton model and proves the rise-and-fall result using sophistication.
+- **Random does not mean sophisticated**: high Kolmogorov complexity means incompressible, not structured. Sophistication was chosen precisely to filter randomness out.
+- **"Closed system" matters**: no outside input is adding order — the complexity peak emerges purely from internal mixing dynamics.
+
+## Where To Go Next
+
+- Read [The First Law of Complexodynamics](/complexodynamics) for the original puzzle in accessible blog form.
+- Read [Kolmogorov Complexity](/kolmogorov-complexity) for the foundation under $K(\cdot)$ and sophistication.
+- Read [MDL Tutorial](/mdl-tutorial) for the structure-plus-noise decomposition applied to model selection.
+- Read [MDL Weights](/mdl-weights) for compression thinking applied to neural networks.

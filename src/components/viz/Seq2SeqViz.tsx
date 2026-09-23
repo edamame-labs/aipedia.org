@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import '../../lib/motion';
 
 const SOURCE = ['The', 'cat', 'sat', '<EOS>'];
 const TARGET = ['<SOS>', 'Le', 'chat', 'assis', '<EOS>'];

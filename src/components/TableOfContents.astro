@@ -1,0 +1,99 @@
+---
+import type { MarkdownHeading } from 'astro';
+
+interface Props {
+  headings: MarkdownHeading[];
+  /** `mobile` collapses above the article; `desktop` is the sticky side rail (shown from lg). */
+  variant: 'mobile' | 'desktop';
+}
+
+const { headings, variant } = Astro.props;
+
+// h1 is the page title, and h4+ is too fine-grained to navigate by
+const items = headings.filter(heading => heading.depth === 2 || heading.depth === 3);
+const show = items.length > 1;
+---
+
+{
+  show && variant === 'mobile' && (
+    <details class="lg:hidden mb-8 rounded-xl border border-border bg-bg-secondary/50">
+      <summary class="cursor-pointer px-4 py-3 text-sm font-medium select-none">Contents</summary>
+      <ol class="px-4 pb-4 space-y-2 text-sm">
+        {items.map(heading => (
+          <li class:list={[heading.depth === 3 && 'pl-4']}>
+            <a href={`#${heading.slug}`} class="text-text-secondary hover:text-text transition-colors">
+              {heading.text}
+            </a>
+          </li>
+        ))}
+      </ol>
+    </details>
+  )
+}
+
+{
+  show && variant === 'desktop' && (
+    <nav aria-label="Table of contents" data-toc class="hidden lg:block sticky top-20 mt-10 max-h-[calc(100vh-6rem)] overflow-y-auto">
+      <p class="mb-3 font-mono text-[11px] uppercase tracking-[0.08em] text-text-secondary">On this page</p>
+      <ol class="space-y-1.5 text-[13px] border-l border-border">
+        {items.map(heading => (
+          <li>
+            <a
+              href={`#${heading.slug}`}
+              data-toc-link
+              class:list={[
+                'block border-l -ml-px border-transparent py-0.5 text-text-secondary hover:text-text transition-colors',
+                heading.depth === 3 ? 'pl-7' : 'pl-4',
+              ]}
+            >
+              {heading.text}
+            </a>
+          </li>
+        ))}
+      </ol>
+    </nav>
+  )
+}
+
+<style is:global>
+  [data-toc-link][aria-current='true'] {
+    color: rgb(var(--color-text));
+    border-left-color: rgb(var(--color-text));
+    font-weight: 500;
+  }
+</style>
+
+<script>
+  const toc = document.querySelector<HTMLElement>('[data-toc]');
+  if (toc) {
+    const links = Array.from(toc.querySelectorAll<HTMLAnchorElement>('[data-toc-link]'));
+    const idOf = (link: HTMLAnchorElement) => decodeURIComponent(link.hash.slice(1));
+    const byId = new Map(links.map(link => [idOf(link), link]));
+    const targets = links
+      .map(link => document.getElementById(idOf(link)))
+      .filter((el): el is HTMLElement => el !== null);
+
+    const setCurrent = (id: string) => {
+      links.forEach(link => link.removeAttribute('aria-current'));
+      byId.get(id)?.setAttribute('aria-current', 'true');
+    };
+
+    // Track the set of headings currently in the reading band rather than
+    // reacting to individual intersection events, so fast scrolling and jumps
+    // can't leave the rail pointing at the wrong section.
+    const visible = new Set<string>();
+    const observer = new IntersectionObserver(
+      entries => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) visible.add(entry.target.id);
+          else visible.delete(entry.target.id);
+        }
+        const first = targets.find(target => visible.has(target.id));
+        if (first) setCurrent(first.id);
+      },
+      { rootMargin: '-80px 0px -70% 0px' }
+    );
+
+    targets.forEach(target => observer.observe(target));
+  }
+</script>

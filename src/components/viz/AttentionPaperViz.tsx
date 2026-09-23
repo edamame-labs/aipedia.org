@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import '../../lib/motion';
 
 type Tab = 'attention' | 'multihead' | 'positional' | 'architecture';
 

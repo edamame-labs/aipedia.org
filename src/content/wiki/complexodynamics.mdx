@@ -19,17 +19,25 @@ resources:
 
 import { ComplexodynamicsViz } from '../../components/viz/ComplexodynamicsViz';
 
-**The First Law of Complexodynamics** is Scott Aaronson's exploration of why physical systems exhibit a characteristic pattern: complexity rises, peaks, then falls—even as entropy monotonically increases.
+**The First Law of Complexodynamics** is Scott Aaronson's blog-post exploration of a puzzle you can see in your coffee cup: physical systems start simple, become intricate and interesting, then fade into featureless equilibrium — complexity rises, peaks, and falls, even though entropy increases the whole time.
+
+> This is the accessible entry point to a two-page story. The formal version, with an actual theorem, is [The Coffee Automaton](/coffee-automaton). The measurement machinery comes from [Kolmogorov Complexity](/kolmogorov-complexity).
+
+## Why Students Should Care
+
+- It sharpens a distinction students constantly blur: **entropy is not complexity**. Maximum-entropy states are boring, not intricate.
+- Defining "interesting structure" rigorously is surprisingly hard — and the candidate definitions here (complextropy, sophistication) connect directly to compression and [MDL](/mdl-tutorial).
+- The rise-then-fall arc is a suggestive lens for thinking about learning dynamics in neural networks.
 
 ## The Puzzle
 
-Entropy always increases (Second Law of Thermodynamics):
+The Second Law of Thermodynamics says entropy never decreases:
 
 $$
 S(t_2) \geq S(t_1) \quad \text{for } t_2 > t_1
 $$
 
-But complexity behaves differently. A freshly shuffled deck isn't complex—it's random. An ordered deck isn't complex—it's simple. Complexity peaks somewhere in between.
+If "more entropy" meant "more complex," the universe would just get steadily more complex forever. But look around: complexity behaves differently. A freshly shuffled deck isn't complex — it's random. A factory-ordered deck isn't complex — it's trivially simple. Complexity peaks somewhere in between order and randomness. Why? And can we define "complexity" so that statement is even meaningful?
 
 ## The Coffee Example
 
@@ -41,46 +49,68 @@ Consider cream being poured into coffee:
 | t=mid | Swirling patterns | Medium | **High** |
 | t=∞ | Uniform mixture | High | Low |
 
-The intricate swirls are more "complex" than either extreme.
+The intricate swirls at mid-mixing are more "complex" than either extreme: the initial state is trivially describable, and the final state is just noise.
 
 ## Defining Complexity
 
-Aaronson proposes **complextropy**: the length of the shortest efficient program that outputs a distribution from which the observed state appears random.
+Here is the hard part. Plain Kolmogorov complexity fails: it assigns its *highest* value to the fully mixed random state, which is exactly the state we want to call boring.
 
-For a string $x$:
+Aaronson proposes **complextropy**: roughly, the length of the shortest *efficient* program that outputs a set (or distribution) within which the observed state looks random. For a string $x$:
+
 $$
 \text{Complextropy}(x) = \min_{S: x \in S} K(S)
 $$
 
-where $K(S)$ is the Kolmogorov complexity of set $S$, and $x$ looks random within $S$.
+where $K(S)$ is the Kolmogorov complexity of the set $S$, and $x$ must look random within $S$.
+
+The idea in words: describe the *pattern*, and let the noise be noise. You pay only for the structure. Ordered states need a tiny pattern description; random states fit the trivial pattern "any string of this length"; only the in-between swirls force a long pattern description.
 
 ## Interactive Demo
 
 Watch complexity rise and fall as a system evolves:
 
-<ComplexodynamicsViz client:load />
+<ComplexodynamicsViz client:visible />
 
 ## Why Complexity Peaks
 
-At $t=0$: Simple description ("all black on left, all white on right")
+At $t=0$: simple description ("all black on left, all white on right")
 
-At $t=\text{mid}$: Complex description (must specify intricate patterns)
+At $t=\text{mid}$: complex description (must specify the intricate mixing patterns)
 
-At $t=\infty$: Simple description ("random noise" or "uniform distribution")
+At $t=\infty$: simple description ("random noise" or "uniform distribution")
+
+Both endpoints are cheap to describe — for opposite reasons. Only the middle is expensive.
 
 ## The Sophistication Connection
 
-Kolmogorov's **sophistication** formalizes this:
+Kolmogorov's own notion of **sophistication** formalizes the same instinct:
 
 $$
 \text{Soph}(x) = \min \{K(S) : x \in S, K(x|S) \geq \log|S| - O(1)\}
 $$
 
-The sophistication of a string is the complexity of the simplest set containing it as a "typical" member.
+You do not need to memorize the condition. It says: find the simplest set that contains $x$ as a *typical* (incompressible-within-the-set) member; the complexity of that set is the sophistication of $x$. It is the "structure only, noise excluded" measure — the [Coffee Automaton](/coffee-automaton) paper later uses it to prove the rise-and-fall rigorously.
 
 ## Implications for AI
 
-Deep learning loss landscapes might follow similar dynamics:
-- Early training: Simple patterns (high loss, low complexity)
-- Mid training: Complex intermediate features
-- Late training: Simplified, generalizable representations
+Deep learning training may follow a similar arc:
+
+- Early training: simple patterns (high loss, low complexity)
+- Mid training: complex intermediate features
+- Late training: simplified, generalizable representations
+
+This is an analogy rather than a theorem — but it is one reason this blog post appears on ML reading lists.
+
+## Common Confusion
+
+- **Entropy vs. complexity**: entropy measures disorder and only goes up; complexity (complextropy/sophistication) measures *structure* and peaks in the middle. The uniform mixture has maximum entropy and near-zero complexity.
+- **Random is not complex**: a random string is incompressible (high Kolmogorov complexity) but has no structure worth describing (low sophistication). The two measures deliberately disagree here.
+- **"First Law" is a playful name**: this is a blog post proposing a conjecture and a definition, not an established law of physics.
+- **This page vs. [Coffee Automaton](/coffee-automaton)**: this post asks the question and proposes complextropy; the paper builds a concrete model and proves the rise-and-fall theorem.
+
+## Where To Go Next
+
+- Read [The Coffee Automaton](/coffee-automaton) for the formal model and the main theorem.
+- Read [Kolmogorov Complexity](/kolmogorov-complexity) for shortest-description reasoning from the ground up.
+- Read [MDL Tutorial](/mdl-tutorial) for the practical "structure vs. noise" trade-off in model selection.
+- Read [MDL Weights](/mdl-weights) for description-length ideas applied to neural networks.

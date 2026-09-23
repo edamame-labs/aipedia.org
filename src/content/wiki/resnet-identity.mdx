@@ -15,47 +15,59 @@ resources:
 
 import { IdentityMappingViz } from '../../components/viz/IdentityMappingViz';
 
-**Identity Mappings in Deep Residual Networks** is the follow-up paper to ResNet that analyzes skip connections more deeply and proposes an improved design—the **pre-activation ResNet**—which enables training networks with over 1000 layers.
+**Identity Mappings in Deep Residual Networks** is the follow-up paper to [ResNet](/resnet). It asks a sharper question — *why exactly do skip connections work, and can we make them work better?* — and answers it with an improved design, the **pre-activation ResNet**, which enables training networks with over 1000 layers.
+
+> Read [ResNet](/resnet) first. This page assumes you know what a residual block and a skip connection are.
+
+## Why Students Should Care
+
+- This paper shows how a **tiny architectural change** — reordering ReLU and batch norm — can be the difference between a network that trains and one that does not.
+- It gives the cleanest mathematical picture of *why* skip connections help, via a direct gradient formula.
+- The lesson generalizes: keep the shortcut path as clean as possible. Modern architectures follow this principle.
 
 ## The Problem with Original ResNet
 
-In the original ResNet, the residual block applies ReLU *after* the addition:
+Think of a residual network as having two paths: a **shortcut path** (the identity) and a **residual path** (the layers). The whole benefit of ResNet comes from the shortcut being a clean, unobstructed highway.
+
+But in the original ResNet, the block applies ReLU *after* the addition:
 
 $$
 h_{l+1} = \text{ReLU}(h_l + \mathcal{F}(h_l, W_l))
 $$
 
-This means the shortcut path is not a pure identity—it passes through a nonlinearity, which can impede gradient flow in very deep networks.
+That means the shortcut path is not a pure identity — the signal passes through a nonlinearity at every block. Over hundreds of blocks, these small obstructions add up and can impede gradient flow in very deep networks.
 
 ## Pure Identity Shortcuts
 
-The key insight: for optimal gradient propagation, the shortcut should be a **clean identity mapping**:
+The key insight: for optimal gradient propagation, the shortcut should be a **clean identity mapping** — nothing on the highway at all:
 
 $$
 h_{l+1} = h_l + \mathcal{F}(h_l, W_l)
 $$
 
-By recursively applying this, any deep layer can directly access any shallow layer:
+Why does this matter? Apply the formula repeatedly and something nice happens — any deep layer is just the sum of a shallow layer plus all the residuals in between:
 
 $$
 h_L = h_l + \sum_{i=l}^{L-1} \mathcal{F}(h_i, W_i)
 $$
 
+In plain English: **layer 1000 can see layer 1 directly**, with no nonlinearities in the way.
+
 ## Pre-activation Design
 
-Moving BN and ReLU *before* the convolution (pre-activation) achieves pure identity shortcuts:
+How do you get pure identity shortcuts while keeping batch norm and ReLU? Move them *before* the convolution instead of after (hence "pre-activation"):
 
 $$
 y = x + \text{Conv}(\text{ReLU}(\text{BN}(x)))
 $$
 
-This subtle rearrangement has profound effects on gradient flow and enables training of 1001-layer networks.
+Same components, different order. This subtle rearrangement leaves the shortcut path completely clean and enables training of 1001-layer networks.
 
 ## Interactive Demo
 
 Compare the original post-activation design with the improved pre-activation version:
 
-<IdentityMappingViz client:load />
+<IdentityMappingViz client:visible />
 
 ## Why Pre-activation Works
 
@@ -65,7 +77,7 @@ $$
 \frac{\partial \mathcal{L}}{\partial h_l} = \frac{\partial \mathcal{L}}{\partial h_L} \left(1 + \frac{\partial}{\partial h_l}\sum_{i=l}^{L-1}\mathcal{F}_i\right)
 $$
 
-The "1" term provides a direct gradient highway from $h_L$ to $h_l$, unimpeded by nonlinearities.
+You do not need to memorize this. The important part is the "1": it means the gradient at any layer includes a **direct, undiminished copy** of the gradient from the top of the network, unimpeded by nonlinearities. Vanishing gradients cannot happen along the shortcut path.
 
 ## Results
 
@@ -76,3 +88,15 @@ The "1" term provides a direct gradient highway from $h_L$ to $h_l$, unimpeded b
 | ResNet-1001 (pre-act) | 4.92% | 22.71% |
 
 Pre-activation enables training of networks 10× deeper with better performance.
+
+## Common Confusion
+
+- **This is a different paper from ResNet.** [ResNet](/resnet) (2015) introduced residual learning; this paper (2016, same authors) analyzed it and improved the block design.
+- **Post-activation vs. pre-activation** refers to *where ReLU and BN sit relative to the addition*: after the addition in the original design, before the convolution in the improved one.
+- **Both designs use skip connections.** The difference is whether the shortcut path is a *pure* identity (pre-activation) or passes through a ReLU (original).
+
+## Where To Go Next
+
+- Read [ResNet](/resnet) if you have not already — this paper builds directly on it
+- Read [Batch Normalization](/batch-normalization) to understand the BN component being reordered here
+- Read [Transformer](/transformer) to see clean residual paths reused in modern architectures

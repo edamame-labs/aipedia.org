@@ -1,12 +1,15 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import '../../lib/motion';
+import { createRng } from '../../lib/rng';
 
 const BATCH_SIZE = 4;
 const FEATURES = 6;
 
 function generateData(): number[][] {
+  const random = createRng(82598);
   return Array.from({ length: BATCH_SIZE }, () =>
-    Array.from({ length: FEATURES }, () => Math.random() * 4 - 1)
+    Array.from({ length: FEATURES }, () => random() * 4 - 1)
   );
 }
 

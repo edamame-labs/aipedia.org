@@ -19,19 +19,31 @@ resources:
 
 import { MessagePassingViz } from '../../components/viz/MessagePassingViz';
 
-**Neural Message Passing for Quantum Chemistry** introduced the Message Passing Neural Network (MPNN) framework, unifying various graph neural network architectures under a single formalism. It achieved state-of-the-art results on molecular property prediction.
+**Neural Message Passing for Quantum Chemistry** introduced the Message Passing Neural Network (MPNN) framework — a single recipe that turned out to describe most existing graph neural networks. The paper both unified the field and set a new state of the art on predicting molecular properties.
+
+> New to graphs in deep learning? The only prerequisite is the idea that data can be nodes connected by edges. If you want the "compare everything to everything" special case first, read [Relational Reasoning](/relational-reasoning).
+
+## Why Students Should Care
+
+- **Graphs are everywhere**: molecules, social networks, road maps, program syntax trees, citation networks. MPNN is the standard mental model for learning on all of them.
+- The framework move — showing that many competing architectures are one algorithm with different plug-ins — is a pattern you will see repeatedly in ML research.
+- The application is real: predicting quantum-chemical properties with a neural net in milliseconds instead of hours of physics simulation opened the door to ML-driven drug and materials discovery.
 
 ## The Problem
 
 Molecules are naturally graphs: atoms are nodes, bonds are edges. Predicting properties like energy or toxicity requires learning from this graph structure.
 
-## Message Passing Framework
+Why not just use a standard network? Because molecules have no natural ordering (which atom is "first"?) and vary in size. A graph network handles both automatically, because it operates on the connectivity itself.
 
-MPNNs operate in two phases:
+## Message Passing: The Gossip Protocol
+
+Here is the intuition before any notation. Every atom starts out knowing only about itself ("I am carbon"). In each round, every atom sends a message to its bonded neighbors and updates its own summary based on what it hears. After one round, each atom knows about its neighbors; after two rounds, its neighbors' neighbors; after $T$ rounds, information has spread $T$ hops across the molecule. Finally, all the atom summaries are pooled into one prediction for the whole molecule.
+
+MPNNs formalize this in two phases.
 
 ### 1. Message Passing Phase
 
-For $T$ timesteps, each node collects messages from neighbors:
+For $T$ timesteps, each node $v$ collects messages from its neighbors $N(v)$:
 
 $$
 m_v^{t+1} = \sum_{u \in N(v)} M_t(h_v^t, h_u^t, e_{vu})
@@ -45,17 +57,19 @@ $$
 
 ### 2. Readout Phase
 
-Aggregate node features into a graph-level prediction:
+Aggregate all final node states into a graph-level prediction:
 
 $$
 \hat{y} = R(\{h_v^T | v \in G\})
 $$
 
+You do not need to memorize the symbols. The important idea is: **a message function $M$ (what neighbors say), an update function $U$ (how a node revises its state), and a readout function $R$ (how the graph votes on the answer)**. Choose those three, and you have specified a graph neural network.
+
 ## Interactive Demo
 
 Watch messages flow through a molecular graph:
 
-<MessagePassingViz client:load />
+<MessagePassingViz client:visible />
 
 ## Key Components
 
@@ -74,21 +88,21 @@ The MPNN framework encompasses:
 - **Interaction Networks** (Battaglia et al.)
 - **Deep Tensor Neural Networks** (Schütt et al.)
 
-Each is an MPNN with specific $M$, $U$, and $R$ functions.
+Each is an MPNN with specific $M$, $U$, and $R$ functions. Before this paper, these looked like rival architectures; after it, they were points in one design space.
 
 ## Virtual Graph Elements
 
-The paper introduced "virtual edges" connecting all atom pairs:
+One limitation of pure message passing: information travels one bond per round, and some chemistry depends on atoms that are *near in space* but not bonded. The paper's fix is "virtual edges" connecting all atom pairs:
 
 $$
 e_{vu} = (d_{vu}, \text{bond type})
 $$
 
-where $d_{vu}$ is the 3D distance. This allows the network to reason about non-bonded interactions.
+where $d_{vu}$ is the 3D distance. This lets the network reason about non-bonded interactions directly.
 
 ## Results on QM9
 
-Predicting molecular properties on the QM9 dataset:
+Predicting molecular properties on the QM9 dataset (lower error = better):
 
 | Property | Units | MPNN Error |
 |----------|-------|------------|
@@ -97,17 +111,32 @@ Predicting molecular properties on the QM9 dataset:
 | Gap | eV | 0.066 |
 | μ | Debye | 0.030 |
 
-MPNN achieved chemical accuracy on most targets.
+MPNN achieved chemical accuracy on most targets — meaning errors small enough for the predictions to be practically useful to chemists.
 
 ## Why This Matters
 
-1. **Unified framework**: Clarified the design space of graph neural networks
-2. **Practical impact**: Enabled ML-accelerated drug discovery
-3. **Architectural insight**: Showed that message passing is the key inductive bias
+1. **Unified framework**: clarified the design space of graph neural networks
+2. **Practical impact**: enabled ML-accelerated drug discovery
+3. **Architectural insight**: showed that message passing is the key inductive bias for graph data
 
 ## Legacy
 
 MPNNs became the foundation for:
-- **SchNet** — Continuous-filter convolutions
-- **DimeNet** — Directional message passing  
-- **Equivariant GNNs** — Respecting 3D symmetries
+
+- **SchNet** — continuous-filter convolutions
+- **DimeNet** — directional message passing
+- **Equivariant GNNs** — respecting 3D symmetries
+
+## Common Confusion
+
+- **MPNN is a framework, not one model**: "an MPNN" usually means "some choice of $M$, $U$, $R$." The paper's best QM9 model is one instance.
+- **Message passing vs. attention**: a [Transformer](/transformer) is essentially message passing on a fully connected graph where message weights come from attention. GNNs restrict messages to actual edges.
+- **Rounds vs. layers**: each message-passing step plays the role of a layer; $T$ rounds means information can travel at most $T$ hops.
+- **Graph-level vs. node-level tasks**: the readout phase is for predicting a property of the *whole* graph; node-level tasks (like classifying each atom) skip or change $R$.
+
+## Where To Go Next
+
+- Read [Relational Reasoning](/relational-reasoning) for the fully-connected, single-round special case of this idea.
+- Read [Relational RNNs](/relational-rnn) for attention-based interaction applied to memory over time.
+- Read [Attention Is All You Need](/attention-is-all-you-need) to see message passing with learned attention weights on a complete graph.
+- Read [Neural ODE](/node) for another example of a paper reframing many architectures as one continuous framework.

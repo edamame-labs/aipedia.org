@@ -31,51 +31,70 @@ resources:
 
 import { Word2VecViz } from '../../components/viz/Word2VecViz';
 
-**Word2Vec**, introduced by Mikolov et al. at Google in 2013, revolutionized NLP by learning dense vector representations of words where semantic similarity corresponds to geometric proximity. The famous equation "king - man + woman = queen" demonstrated these vectors capture meaningful relationships.
+**Word2Vec** is a method for turning words into vectors of numbers so that words with similar meanings end up close together. Introduced by Mikolov et al. at Google in 2013, it revolutionized NLP — the famous equation "king - man + woman = queen" showed that these vectors capture meaningful relationships.
+
+> This page is a good starting point for NLP — no Transformer knowledge needed. For what replaced static word vectors, see [BERT](/bert).
+
+## Why Students Should Care
+
+- **Embeddings are everywhere.** Every modern language model starts by mapping tokens to vectors — Word2Vec is where that idea took off.
+- It is the cleanest demonstration that **meaning can emerge from prediction**: train on a simple guessing game, get semantic structure for free.
+- The same trick was later applied to graphs, products, users, and more — "X2Vec" became a pattern.
+
+## A Quick Example
+
+How would you represent the word "cat" as numbers? The naive answer is a **one-hot vector**: a huge vector of zeros with a single 1 in the "cat" slot. But then "cat" and "dog" are exactly as different from each other as "cat" and "refrigerator" — every pair of one-hot vectors is equally far apart. There is no notion of similarity at all.
+
+Word2Vec's answer: learn a short, dense vector for each word from how it is used in text. Words that appear in similar contexts ("cat" and "dog" both appear near "pet", "fur", "vet") end up with similar vectors.
 
 ## The Key Insight
 
 Instead of one-hot vectors (sparse, no similarity), learn dense embeddings where:
+
 - Similar words are close: vec("cat") ≈ vec("dog")
 - Relationships are linear: vec("king") - vec("man") + vec("woman") ≈ vec("queen")
 
 ## Two Architectures
 
+Both variants train embeddings by playing a prediction game over a sliding window of text — they just play it in opposite directions.
+
 ### Skip-gram
 
-Given a word, predict surrounding context words:
+Given a word, predict the surrounding context words:
 
 $$
 P(w_{context} | w_{center}) = \frac{\exp(v_{w_c}^T v_{w_t})}{\sum_{w \in V} \exp(v_w^T v_{w_t})}
 $$
 
-**Objective**: Maximize probability of context words given center word.
+**Objective**: maximize the probability of the context words given the center word. The dot product $v_{w_c}^T v_{w_t}$ measures how compatible two word vectors are — the softmax turns those scores into probabilities.
 
 ### CBOW (Continuous Bag of Words)
 
-Given context words, predict the center word:
+Given the context words, predict the center word:
 
 $$
 P(w_{center} | w_{context}) = \frac{\exp(v_{w_t}^T \bar{v}_{context})}{\sum_{w \in V} \exp(v_w^T \bar{v}_{context})}
 $$
 
-where $\bar{v}_{context}$ is the average of context word vectors.
+where $\bar{v}_{context}$ is the average of the context word vectors.
+
+You do not need to memorize either formula. The important idea is: **words are pushed toward vectors that make their real contexts predictable**.
 
 ## Interactive Demo
 
 Explore word embeddings and vector arithmetic:
 
-<Word2VecViz client:load />
+<Word2VecViz client:visible />
 
 ## Training with Negative Sampling
 
-Computing the full softmax over vocabulary is expensive. **Negative sampling** approximates it:
+There is a practical problem: the softmax above sums over the *entire vocabulary* (hundreds of thousands of words) for every training example. That is far too expensive. **Negative sampling** approximates it:
 
 $$
 \log \sigma(v_{w_O}^T v_{w_I}) + \sum_{i=1}^{k} \mathbb{E}_{w_i \sim P_n(w)} [\log \sigma(-v_{w_i}^T v_{w_I})]
 $$
 
-Instead of normalizing over all words, contrast positive pairs against $k$ random negative samples.
+Instead of normalizing over all words, contrast each positive pair against just $k$ random "negative" words. In plain English: **make the true context word score high, and a handful of random words score low**.
 
 ## The Training Process
 
@@ -92,13 +111,13 @@ Objective: Push positive pairs together, negative pairs apart
 
 ## Why Linear Relationships?
 
-The optimization objective creates a structure where:
+Why does vector arithmetic like king - man + woman work at all? The optimization objective creates a structure where:
 
 $$
 \vec{v}_{king} - \vec{v}_{man} \approx \vec{v}_{queen} - \vec{v}_{woman}
 $$
 
-This emerges because words appearing in similar contexts get similar vectors, and gender/royalty patterns are consistent across the corpus.
+This emerges because words appearing in similar contexts get similar vectors, and gender/royalty patterns are consistent across the corpus. Nobody programmed this in — it is a side effect of the prediction objective.
 
 ## Hyperparameters
 
@@ -122,18 +141,32 @@ This emerges because words appearing in similar contexts get similar vectors, an
 
 ## Limitations
 
-1. **One vector per word**: "bank" (river) = "bank" (financial)
+1. **One vector per word**: "bank" (river) = "bank" (financial) — the vector must average both meanings
 2. **No morphology**: "run", "running", "runs" are unrelated
-3. **Fixed vocabulary**: Out-of-vocabulary words get no embedding
-4. **Shallow context**: Just neighboring words, not deep semantics
+3. **Fixed vocabulary**: out-of-vocabulary words get no embedding
+4. **Shallow context**: just neighboring words, not deep semantics
 
-These limitations led to contextual embeddings (ELMo, BERT).
+These limitations led to contextual embeddings (ELMo, [BERT](/bert)), where a word's vector changes depending on the sentence it appears in.
 
 ## Historical Impact
 
 Word2Vec:
+
 - Made NLP research accessible (fast to train)
 - Introduced the embedding paradigm
 - Enabled transfer learning in NLP
 - Demonstrated emergent structure in learned representations
 - Inspired similar approaches for graphs, products, etc.
+
+## Common Confusion
+
+- **Word2Vec embeddings are static; BERT embeddings are contextual.** Word2Vec gives each word one fixed vector; BERT computes a fresh vector for each occurrence based on the sentence.
+- **Skip-gram and CBOW are two training setups, not two models.** Both produce the same kind of word vectors — they differ only in which side of the window is predicted.
+- **Word2Vec is not a language model.** It learns representations from a prediction game, but it is not designed to generate text.
+
+## Where To Go Next
+
+- Read [BERT](/bert) for contextual embeddings that fixed Word2Vec's one-vector-per-word limit
+- Read [Transformer](/transformer) for the architecture behind contextual embeddings
+- Read [Seq2Seq](/seq2seq) for how word vectors feed into sequence models
+- Read [Pre-training](/pre-training) for the broader idea of learning from unlabeled data first

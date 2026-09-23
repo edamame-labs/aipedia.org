@@ -1,12 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import '../../lib/motion';
+import { createRng } from '../../lib/rng';
 
 const GRID_SIZE = 8;
 const TOTAL_STEPS = 20;
 
 function generateNoise(): number[][] {
+  const random = createRng(44948);
   return Array.from({ length: GRID_SIZE }, () =>
-    Array.from({ length: GRID_SIZE }, () => Math.random())
+    Array.from({ length: GRID_SIZE }, () => random())
   );
 }
 

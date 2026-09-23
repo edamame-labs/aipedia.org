@@ -1,9 +1,8 @@
 ---
 import Base from '../layouts/Base.astro';
 import { ArrowUpRight } from '../components/EntryCard';
-import { EntryIndex } from '../components/EntryIndex';
+import EntryIndex from '../components/EntryIndex.astro';
 import { getItems, topicCounts, START_HERE } from '../lib/catalog';
-import { quickLinks } from '../lib/labels';
 import { askAILinks, siteOrigin } from '../lib/markdown';
 
 const items = await getItems();
@@ -11,9 +10,6 @@ const topics = topicCounts(items).filter(({ count }) => count >= 3);
 const startHere = START_HERE.filter(({ slug }) => items.some((item) => item.slug === slug));
 const demoCount = items.filter((item) => item.interactive).length;
 const resourceCount = items.reduce((sum, item) => sum + item.resources.length, 0);
-
-// The index only needs the links its cards show
-const indexItems = items.map((item) => ({ ...item, resources: quickLinks(item.resources) }));
 
 const origin = siteOrigin(Astro.site);
 const askLinks = askAILinks(
@@ -75,6 +71,6 @@ const askLinks = askAILinks(
       </ol>
     </section>
 
-    <EntryIndex client:load items={indexItems} topics={topics} />
+    <EntryIndex items={items} topics={topics} />
   </div>
 </Base>

@@ -15,71 +15,98 @@ resources:
 
 import { ResNetViz } from '../../components/viz/ResNetViz';
 
-**ResNet** (Residual Network) introduced skip connections that revolutionized deep learning by enabling the training of networks with over 150 layers. It won the 2015 ImageNet challenge with a 3.57% error rate—surpassing human-level performance.
+**ResNet** (Residual Network) introduced skip connections: shortcuts that let a layer's input bypass the layer and be added back to its output. This simple change made it possible to train networks with over 150 layers, and ResNet won the 2015 ImageNet challenge with a 3.57% error rate — surpassing human-level performance.
+
+> If CNNs are new to you, read [AlexNet](/alexnet) or [CS231n](/cs231n) first. This page covers the original ResNet. For the follow-up paper that refined the design, see [Identity Mappings in Deep Residual Networks](/resnet-identity).
+
+## Why Students Should Care
+
+- Skip connections are now **everywhere**: nearly every modern vision model and every [Transformer](/transformer) uses residual connections.
+- ResNet explains a core lesson of deep learning: the obstacle to depth was not overfitting but **optimization** — and a small architectural change fixed it.
+- ResNet-style backbones remained the default in computer vision for years and are still widely used.
 
 ## The Degradation Problem
 
-Before ResNet, adding more layers to a network eventually *degraded* performance:
+Here is the puzzle that motivated ResNet. You take a 20-layer network that works well, add more layers, and expect it to do at least as well — the extra layers could simply copy their input. Instead, the deeper network gets *worse*:
 
 $$
 \text{Error}_{56\text{-layer}} > \text{Error}_{20\text{-layer}}
 $$
 
-This wasn't overfitting—training error also increased. Deeper networks were fundamentally harder to optimize.
+Crucially, this was not overfitting — **training error** also increased. The deeper network was not memorizing too much; it was failing to optimize at all. Apparently, plain stacked layers find it surprisingly hard to learn even the identity function ("just pass the input through unchanged").
 
 ## Residual Learning
 
-Instead of learning a desired mapping $H(x)$ directly, ResNet learns the **residual**:
+ResNet's fix: stop asking layers to learn the full mapping. Instead of learning a desired mapping $H(x)$ directly, each block learns only the **residual** — the difference between the output and the input:
 
 $$
 F(x) = H(x) - x
 $$
 
-The output becomes:
+The block's output then becomes:
 
 $$
 y = F(x) + x
 $$
 
-The key insight: if identity is optimal, it's easier to push $F(x) \rightarrow 0$ than to learn $H(x) = x$.
+The key insight: if the best thing a block can do is nothing (identity), it is much easier to push $F(x) \rightarrow 0$ (just shrink some weights toward zero) than to make a stack of nonlinear layers learn $H(x) = x$ exactly.
+
+You do not need to memorize the equations. The important idea is: **each block learns a small correction to its input, not a whole new representation**.
 
 ## Skip Connections
 
-The identity shortcut $x$ bypasses layers and is added to the output:
+The identity shortcut $x$ bypasses the layers and is added to the output:
 
 $$
 y = \mathcal{F}(x, \{W_i\}) + x
 $$
 
 These shortcuts:
-- Add no extra parameters
+
+- Add **no extra parameters** — the shortcut is just addition
 - Enable gradient flow through hundreds of layers
 - Allow each block to refine features rather than transform them completely
 
 ## Block Architectures
 
-**Basic Block** (ResNet-18/34): Two 3×3 convolutions
-**Bottleneck Block** (ResNet-50/101/152): 1×1 → 3×3 → 1×1 convolutions for efficiency
+- **Basic Block** (ResNet-18/34): two 3×3 convolutions
+- **Bottleneck Block** (ResNet-50/101/152): 1×1 → 3×3 → 1×1 convolutions, where the 1×1 layers shrink and then restore the channel count for efficiency
 
 ## Interactive Demo
 
 Explore residual blocks and toggle skip connections to see their effect:
 
-<ResNetViz client:load />
+<ResNetViz client:visible />
 
 ## Why It Works
 
-Skip connections create **gradient highways**:
+Skip connections create **gradient highways**. Look at how the gradient flows backward through a block:
 
 $$
 \frac{\partial \mathcal{L}}{\partial x} = \frac{\partial \mathcal{L}}{\partial y} \cdot \left(1 + \frac{\partial F}{\partial x}\right)
 $$
 
-The "1" term ensures gradients flow directly backward, preventing vanishing gradients even in very deep networks.
+The "1" term is the shortcut. Even if the gradient through the layers ($\partial F / \partial x$) becomes tiny, the gradient can still flow directly backward through the addition. That prevents vanishing gradients even in very deep networks.
+
+One-line takeaway: **the shortcut guarantees every layer receives a usable gradient, no matter how deep the network is**.
 
 ## Impact
 
 ResNet's influence extends far beyond image classification:
+
 - Foundation for most modern vision architectures
-- Inspired connections in Transformers (residual attention)
-- Enabled training of networks with 1000+ layers
+- Inspired the residual connections used in [Transformers](/transformer)
+- Enabled training of networks with 1000+ layers (see [Identity Mappings](/resnet-identity))
+
+## Common Confusion
+
+- **The degradation problem is not overfitting.** Overfitting means low training error but high test error. Degradation means even *training* error got worse with depth — an optimization failure, not a generalization failure.
+- **ResNet is the architecture; a skip (residual) connection is the technique.** Skip connections now appear in many models that are not ResNets, including Transformers.
+- **ResNet vs. [Identity Mappings](/resnet-identity):** the original 2015 paper introduced residual learning; the 2016 follow-up analyzed the shortcuts more carefully and proposed the improved pre-activation design.
+
+## Where To Go Next
+
+- Read [Identity Mappings in Deep Residual Networks](/resnet-identity) for the refined pre-activation design
+- Read [AlexNet](/alexnet) for the network that started the deep CNN era
+- Read [Batch Normalization](/batch-normalization) for the other key ingredient in training deep networks
+- Read [Transformer](/transformer) to see residual connections outside of vision

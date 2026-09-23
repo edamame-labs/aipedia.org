@@ -1,0 +1,165 @@
+---
+// The home page index: type tabs, topics, a filter box and ordering over a grid
+// of server-rendered cards. The behavior lives in src/scripts/entry-index.ts, so
+// the page ships no React.
+import { EntryCard } from './EntryCard';
+import { CATEGORY_LABELS, CATEGORY_ORDER, tagLabel, type Item } from '../lib/labels';
+
+interface Props {
+  items: Item[];
+  /** Topics offered as filters, with their entry counts */
+  topics: { tag: string; count: number }[];
+}
+
+const { items, topics } = Astro.props;
+
+const typeCounts = new Map<string, number>();
+for (const item of items) typeCounts.set(item.category, (typeCounts.get(item.category) ?? 0) + 1);
+const types = CATEGORY_ORDER.filter((category) => typeCounts.has(category));
+
+// What the script needs to describe a filtered view (including topics that
+// are only reachable by link, like ?topic=deep-learning)
+const labels = {
+  types: Object.fromEntries(types.map((category) => [category, CATEGORY_LABELS[category]])),
+  tags: Object.fromEntries([...new Set(items.flatMap((item) => item.tags))].map((tag) => [tag, tagLabel(tag)])),
+};
+
+const tab =
+  'shrink-0 border-b-[1.5px] border-transparent pb-3 text-[14px] text-text-secondary transition-colors hover:text-text aria-pressed:border-text aria-pressed:text-text';
+const topicButton =
+  'text-text-secondary transition-colors hover:text-text aria-pressed:font-medium aria-pressed:text-text aria-pressed:underline aria-pressed:underline-offset-4';
+const count = 'ml-1.5 font-mono text-[11px] tabular-nums opacity-60';
+---
+
+<section aria-label="Index" data-index>
+  <div class="flex flex-col-reverse gap-3 border-b border-border md:flex-row md:items-end md:justify-between">
+    <div class="-mb-px flex gap-5 overflow-x-auto" role="group" aria-label="Type">
+      <button type="button" data-type="" aria-pressed="true" class={tab}>
+        All<span class={count}>{items.length}</span>
+      </button>
+      {types.map((category) => (
+        <button type="button" data-type={category} aria-pressed="false" class={tab}>
+          {CATEGORY_LABELS[category].many}<span class={count}>{typeCounts.get(category)}</span>
+        </button>
+      ))}
+    </div>
+
+    <div class="flex items-center gap-2 md:pb-3">
+      <label class="relative flex flex-1 items-center md:flex-none">
+        <span class="sr-only">Filter entries</span>
+        <svg
+          class="pointer-events-none absolute left-2.5 h-3.5 w-3.5 text-text-secondary"
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          aria-hidden="true"
+        >
+          <path d="M2 4h12M4 8h8M6 12h4" stroke-linecap="round" />
+        </svg>
+        <input
+          type="search"
+          data-index-query
+          autocomplete="off"
+          placeholder="Filter entries"
+          class="h-8 w-full rounded-md border border-border-strong/60 bg-bg pl-8 pr-7 text-[13px] text-text outline-none transition-colors placeholder:text-text-secondary focus:border-text md:w-56 [&::-webkit-search-cancel-button]:hidden"
+        />
+        <button
+          type="button"
+          data-index-query-clear
+          hidden
+          class="absolute right-2 text-text-secondary hover:text-text"
+          aria-label="Clear filter"
+        >
+          <svg class="h-3 w-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+            <path d="M4 4l8 8M12 4l-8 8" stroke-linecap="round" />
+          </svg>
+        </button>
+        <kbd
+          data-index-kbd
+          class="pointer-events-none absolute right-2 hidden rounded border border-border px-1 font-mono text-[10px] leading-4 text-text-secondary md:block"
+          >/</kbd
+        >
+      </label>
+
+      <label class="relative flex items-center">
+        <span class="sr-only">Order</span>
+        <select
+          data-index-order
+          class="h-8 appearance-none rounded-md border border-border-strong/60 bg-bg pl-2.5 pr-7 text-[13px] text-text-secondary outline-none transition-colors hover:text-text focus:border-text"
+        >
+          <option value="newest">Recently added</option>
+          <option value="chronological">Chronological</option>
+          <option value="az">A–Z</option>
+        </select>
+        <svg
+          class="pointer-events-none absolute right-2 h-3 w-3 text-text-secondary"
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          aria-hidden="true"
+        >
+          <path d="M4.5 6.5 8 10l3.5-3.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </label>
+    </div>
+  </div>
+
+  <nav
+    aria-label="Topics"
+    class="-mx-5 flex items-baseline gap-y-1.5 overflow-x-auto whitespace-nowrap px-5 py-4 text-[13px] leading-5 sm:mx-0 sm:flex-wrap sm:whitespace-normal sm:px-0"
+  >
+    <span class="mr-3 font-mono text-[11px] uppercase tracking-[0.08em] text-text-secondary">Topics</span>
+    {topics.map(({ tag, count: n }, i) => (
+      <>
+        {i > 0 && <span class="mx-1.5 text-border" aria-hidden="true">/</span>}
+        <button type="button" data-topic={tag} aria-pressed="false" class={topicButton}>
+          {tagLabel(tag)}<span class="ml-1 font-mono text-[10.5px] tabular-nums opacity-60">{n}</span>
+        </button>
+      </>
+    ))}
+    <span class="mx-1.5 text-border" aria-hidden="true">/</span>
+    <a href="/tags" class="text-text-secondary transition-colors hover:text-text">More&nbsp;&rarr;</a>
+  </nav>
+
+  <p class="mb-4 flex min-h-5 items-center gap-3 text-[13px] text-text-secondary" aria-live="polite">
+    <span data-index-summary>{items.length} entries</span>
+    <button type="button" data-index-clear hidden class="text-text underline-offset-4 hover:underline">Clear</button>
+  </p>
+
+  <div data-index-grid class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    {items.map((item) => (
+      <div
+        data-entry
+        data-slug={item.slug}
+        data-title={item.title}
+        data-description={item.description}
+        data-by={item.by}
+        data-category={item.category}
+        data-tags={item.tags.join(' ')}
+        data-year={item.year}
+        data-added={item.added}
+      >
+        <EntryCard item={item} className="h-full" />
+      </div>
+    ))}
+  </div>
+
+  <div data-index-empty hidden class="rounded-xl border border-dashed border-border px-6 py-16 text-center">
+    <p class="text-[15px]">No entries match.</p>
+    <button
+      type="button"
+      data-index-clear
+      class="mt-2 text-[13px] text-text-secondary underline underline-offset-4 hover:text-text"
+    >
+      Clear filters
+    </button>
+  </div>
+
+  <script is:inline type="application/json" data-index-labels set:html={JSON.stringify(labels)} />
+</section>
+
+<script>
+  import '../scripts/entry-index';
+</script>

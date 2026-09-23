@@ -27,46 +27,59 @@ resources:
 
 import { Seq2SeqViz } from '../../components/viz/Seq2SeqViz';
 
-**Sequence-to-Sequence** (Seq2Seq), introduced by Sutskever et al. at Google in 2014, established the encoder-decoder paradigm for mapping variable-length input sequences to variable-length output sequences. It enabled neural machine translation and became the foundation for modern language models.
+**Sequence-to-Sequence** (Seq2Seq) is a neural architecture that turns one sequence into another: read the input with an **encoder**, then write the output with a **decoder**. Introduced by Sutskever et al. at Google in 2014, it enabled neural machine translation and became the foundation for modern language models.
+
+> This page assumes basic familiarity with recurrent networks — read [Understanding LSTMs](/understanding-lstms) first if needed. Seq2Seq's main weakness led directly to [Bahdanau Attention](/bahdanau-attention) and then the [Transformer](/transformer).
+
+## Why Students Should Care
+
+- The **encoder-decoder** split introduced here is still the mental model behind translation, summarization, and chat systems.
+- Seq2Seq is the first step in the chain that leads to attention and Transformers — you cannot appreciate what attention fixed without knowing this design.
+- Practical ideas born here — teacher forcing, beam search — are still used to train and run today's language models.
 
 ## The Problem
 
-Traditional neural networks require fixed-size inputs and outputs. But many tasks have variable lengths:
+Traditional neural networks require fixed-size inputs and outputs. But many tasks have variable lengths on both sides:
+
 - Translation: "Hello" (1 word) → "Bonjour" (1 word)
 - Translation: "How are you?" (3 words) → "Comment allez-vous?" (2 words)
+
+There is no fixed slot count you can design a plain feed-forward network around. Seq2Seq needed a way to map *any-length* input to *any-length* output.
 
 ## The Solution: Encoder-Decoder
 
 Split the problem into two parts:
 
-1. **Encoder**: Read the entire input sequence, compress into a fixed-size vector (the "thought vector" or "context")
-2. **Decoder**: Generate the output sequence from this context vector
+1. **Encoder**: read the entire input sequence and compress it into a fixed-size vector (the "thought vector" or "context")
+2. **Decoder**: generate the output sequence, one token at a time, starting from this context vector
 
 $$
 \text{Input} \xrightarrow{\text{Encoder}} \mathbf{c} \xrightarrow{\text{Decoder}} \text{Output}
 $$
 
+Think of it as: read the whole sentence, form a thought, then say the thought in the other language.
+
 ## Interactive Demo
 
 Watch how Seq2Seq encodes a sentence and decodes its translation:
 
-<Seq2SeqViz client:load />
+<Seq2SeqViz client:visible />
 
 ## The Architecture
 
 ### Encoder (LSTM)
 
-Processes input sequence $x_1, x_2, ..., x_T$:
+The encoder is an LSTM that processes the input sequence $x_1, x_2, ..., x_T$ one token at a time, updating its hidden state:
 
 $$
 h_t = \text{LSTM}(x_t, h_{t-1})
 $$
 
-The final hidden state $h_T$ becomes the context vector $\mathbf{c}$.
+The final hidden state $h_T$ becomes the context vector $\mathbf{c}$ — a summary of everything it read.
 
 ### Decoder (LSTM)
 
-Generates output sequence $y_1, y_2, ..., y_{T'}$:
+The decoder is another LSTM that generates the output sequence $y_1, y_2, ..., y_{T'}$, feeding each generated word back in as input for the next step:
 
 $$
 s_t = \text{LSTM}(y_{t-1}, s_{t-1})
@@ -76,11 +89,11 @@ $$
 P(y_t | y_{<t}, \mathbf{c}) = \text{softmax}(W_s \cdot s_t)
 $$
 
-The decoder is initialized with $s_0 = \mathbf{c}$.
+The decoder is initialized with $s_0 = \mathbf{c}$ — the "thought" is its starting point.
 
 ## Key Innovations
 
-### 1. Reversing Input Sequence
+### 1. Reversing the Input Sequence
 
 Reversing the source sentence improved translation significantly:
 
@@ -89,7 +102,7 @@ Original: "A B C" → "X Y Z"
 Reversed: "C B A" → "X Y Z"
 ```
 
-This brings corresponding words closer in terms of RNN distance.
+Why it helps: the first source word ends up right next to the first target word, so the RNN has a shorter path between corresponding words at the start of the sentence.
 
 ### 2. Deep LSTMs
 
@@ -103,7 +116,7 @@ Using 4-layer LSTMs significantly outperformed shallow networks:
 
 ### 3. Beam Search Decoding
 
-Instead of greedy decoding (taking the most likely word at each step), keep the top-k candidates:
+Greedy decoding (taking the single most likely word at each step) can lock in an early mistake. Beam search instead keeps the top-k candidate sequences at every step:
 
 ```
 Beam size = 3:
@@ -114,35 +127,35 @@ Step 2: [The cat, The dog, A cat, ...]
 
 ## Training
 
-Teacher forcing during training:
+Training uses **teacher forcing**: at each step, feed the decoder the ground-truth previous token $y_{t-1}^*$ rather than the model's own (possibly wrong) prediction:
 
 $$
 \mathcal{L} = -\sum_{t=1}^{T'} \log P(y_t^* | y_1^*, ..., y_{t-1}^*, \mathbf{c})
 $$
 
-Use the ground-truth previous token $y_{t-1}^*$ rather than the model's prediction.
+The takeaway: during training the model always sees the correct history, which keeps learning stable; at inference it must rely on its own outputs.
 
 ## The Bottleneck Problem
 
-The fixed-size context vector $\mathbf{c}$ must encode the entire input:
+The fixed-size context vector $\mathbf{c}$ must encode the entire input, and that is the design's Achilles' heel:
 
 - Works well for short sequences
-- Degrades for long sequences (information compression)
-- Led to the invention of **attention mechanisms**
+- Degrades for long sequences (information gets compressed away)
+- Led directly to the invention of **attention mechanisms**
 
 ## From Seq2Seq to Attention
 
-The limitation of a single context vector motivated Bahdanau attention (2014):
+The limitation of a single context vector motivated [Bahdanau attention](/bahdanau-attention) (2014):
 
 $$
 \mathbf{c}_t = \sum_i \alpha_{ti} h_i
 $$
 
-Each decoder step attends to different parts of the encoder output, solving the bottleneck.
+Instead of one fixed summary, each decoder step gets its own weighted mix of *all* encoder states — the decoder can look back at whichever input words it needs. This solved the bottleneck.
 
 ## Applications
 
-Seq2Seq enabled:
+Seq2Seq enabled a huge range of "sequence in, sequence out" tasks:
 
 | Task | Input | Output |
 |------|-------|--------|
@@ -165,12 +178,15 @@ Seq2Seq enabled:
 ## Why It Mattered
 
 Seq2Seq established:
-- **End-to-end learning**: No hand-crafted features or alignment
-- **Encoder-decoder paradigm**: Used by transformers today
-- **Variable-length I/O**: Fundamental for language tasks
-- **Transfer learning path**: Pre-trained encoders/decoders
+
+- **End-to-end learning**: no hand-crafted features or alignment
+- **Encoder-decoder paradigm**: used by transformers today
+- **Variable-length I/O**: fundamental for language tasks
+- **Transfer learning path**: pre-trained encoders/decoders
 
 ## Code Example
+
+A minimal Seq2Seq loop with teacher forcing:
 
 ```python
 class Seq2Seq(nn.Module):
@@ -192,3 +208,16 @@ class Seq2Seq(nn.Module):
 
         return torch.stack(outputs)
 ```
+
+## Common Confusion
+
+- **Seq2Seq is an architecture pattern, not one specific model.** The 2014 paper used LSTMs, but "encoder-decoder" describes Transformers too.
+- **The context vector is not attention.** Vanilla Seq2Seq has exactly one fixed summary vector; attention (a later addition) replaces it with a per-step weighted mix.
+- **Teacher forcing happens only during training.** At inference time the decoder must consume its own predictions.
+
+## Where To Go Next
+
+- Read [Understanding LSTMs](/understanding-lstms) for the recurrent cells inside encoder and decoder
+- Read [Bahdanau Attention](/bahdanau-attention) for the fix to the bottleneck problem
+- Read [Transformer](/transformer) for the architecture that replaced recurrence entirely
+- Read [GPT](/gpt) for modern decoder-only sequence generation

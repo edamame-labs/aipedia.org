@@ -1,10 +1,13 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import '../../lib/motion';
+import { createRng } from '../../lib/rng';
 
-function shuffleArray<T>(arr: T[]): T[] {
+function shuffleArray<T>(arr: T[], seed: number): T[] {
+  const random = createRng(seed);
   const result = [...arr];
   for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(random() * (i + 1));
     [result[i], result[j]] = [result[j], result[i]];
   }
   return result;
@@ -16,7 +19,7 @@ export function OrderMattersViz() {
   const [mode, setMode] = useState<'set' | 'sequence'>('set');
   const [key, setKey] = useState(0);
 
-  const shuffled = useMemo(() => shuffleArray(ORIGINAL), [key]);
+  const shuffled = useMemo(() => shuffleArray(ORIGINAL, 64399 + key * 7919), [key]);
   const sorted = useMemo(() => [...ORIGINAL].sort((a, b) => a - b), []);
 
   const regenerate = () => setKey(k => k + 1);

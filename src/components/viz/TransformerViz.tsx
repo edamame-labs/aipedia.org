@@ -1,17 +1,20 @@
 import { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import '../../lib/motion';
+import { createRng } from '../../lib/rng';
 
 const TOKENS = ['The', 'cat', 'sat', 'on', 'the', 'mat', '.', '[END]'];
 const NUM_HEADS = 4;
 
 function generateMultiHeadAttention(size: number, heads: number) {
+  const random = createRng(2984);
   return Array.from({ length: heads }, () => {
     const matrix: number[][] = [];
     for (let i = 0; i < size; i++) {
       const row: number[] = [];
       let sum = 0;
       for (let j = 0; j < size; j++) {
-        const v = Math.random();
+        const v = random();
         row.push(v);
         sum += v;
       }

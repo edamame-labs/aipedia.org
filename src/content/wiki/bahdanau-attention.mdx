@@ -19,7 +19,19 @@ resources:
 
 import { AttentionAlignmentViz } from '../../components/viz/AttentionAlignmentViz';
 
-This landmark paper introduced the **attention mechanism** for neural machine translation, solving the bottleneck problem of fixed-size encoder representations. It's one of the most influential papers in modern AI.
+This landmark paper by Bahdanau, Cho, and Bengio introduced the **attention mechanism** for neural machine translation: instead of squeezing a whole sentence into one vector, let the decoder look back at the input and pick what is relevant at each step. It is one of the most influential papers in modern AI.
+
+> If this page feels too fast, read [Sequence to Sequence](/seq2seq) first — this paper fixes seq2seq's biggest weakness. For where attention went next, see [Transformer](/transformer).
+
+## Why Students Should Care
+
+- This is where **attention** — the mechanism behind Transformers and every modern LLM — was born.
+- It is a perfect case study in research: identify a bottleneck, design a mechanism that removes it, measure the gain.
+- The idea generalizes far beyond translation: "let the model choose what to look at" shows up in vision, speech, and multimodal models.
+
+## A Quick Example
+
+Imagine translating a 50-word German sentence into English. A standard seq2seq model forces you to read the whole sentence once, memorize it as a single fixed-size summary, then write the translation purely from memory. A human translator does not work that way — they glance back at the relevant source words while writing each output word. Attention gives the model that ability to glance back.
 
 ## The Bottleneck Problem
 
@@ -29,7 +41,7 @@ $$
 c = f(x_1, x_2, ..., x_T)
 $$
 
-This becomes a bottleneck for long sequences—all information must squeeze through a single vector.
+This becomes a bottleneck for long sequences — all information must squeeze through a single vector, no matter how long the input is.
 
 ## The Attention Solution
 
@@ -39,11 +51,13 @@ $$
 c_i = \sum_{j=1}^{T} \alpha_{ij} h_j
 $$
 
-where $\alpha_{ij}$ is the attention weight that output position $i$ places on input position $j$.
+where $\alpha_{ij}$ is the attention weight that output position $i$ places on input position $j$, and $h_j$ is the encoder state for input word $j$.
+
+The important idea is: each output word gets its own **weighted mix of all input words**, with the weights chosen by the model.
 
 ## Computing Attention Weights
 
-The attention weights are computed by an alignment model:
+How does the model choose the weights? An alignment model scores how relevant each input position is, then a softmax turns the scores into weights that sum to 1:
 
 $$
 e_{ij} = a(s_{i-1}, h_j)
@@ -53,13 +67,13 @@ $$
 \alpha_{ij} = \frac{\exp(e_{ij})}{\sum_{k=1}^{T} \exp(e_{ik})}
 $$
 
-The alignment function $a$ (often a small neural network) scores how well input $j$ and output $i$ match.
+The alignment function $a$ (often a small neural network) scores how well input $j$ and output $i$ match. You do not need to memorize the formulas — the recipe is: **score every input word, softmax the scores, use them as mixing weights**.
 
 ## Interactive Demo
 
 Watch attention align source and target words during translation:
 
-<AttentionAlignmentViz client:load />
+<AttentionAlignmentViz client:visible />
 
 ## The Alignment Model
 
@@ -69,14 +83,14 @@ $$
 e_{ij} = v^T \tanh(W_s s_{i-1} + W_h h_j)
 $$
 
-This learnable function discovers which source words are relevant for generating each target word.
+This learnable function discovers which source words are relevant for generating each target word — no hand-built dictionary or word alignments required.
 
 ## Why This Changed Everything
 
-1. **No bottleneck**: Each output step accesses all encoder states
-2. **Interpretable**: Attention weights show what the model "looks at"
-3. **Handles long sequences**: Performance doesn't degrade with length
-4. **Generalizable**: The mechanism applies far beyond translation
+1. **No bottleneck**: each output step accesses all encoder states
+2. **Interpretable**: attention weights show what the model "looks at"
+3. **Handles long sequences**: performance doesn't degrade with length
+4. **Generalizable**: the mechanism applies far beyond translation
 
 ## Results
 
@@ -91,7 +105,21 @@ Attention closed the gap with statistical MT and enabled future improvements.
 ## Legacy
 
 This paper's attention mechanism became:
-- The foundation of **Transformers** (self-attention)
+
+- The foundation of **Transformers** (self-attention) — see [Transformer](/transformer)
 - Used in **image captioning** (visual attention)
 - Core to **speech recognition** (CTC-attention)
 - Essential for **modern LLMs**
+
+## Common Confusion
+
+- **Bahdanau attention vs. self-attention.** Here, the decoder attends to the *encoder's* states (cross-attention between two sequences). In Transformers, tokens in one sequence attend to *each other* (self-attention).
+- **Attention vs. alignment.** "Alignment" is the translation-specific framing (which source word maps to which target word); "attention" is the general mechanism computing it.
+- **This paper vs. Attention Is All You Need.** This 2014 paper *introduced* attention as an add-on to RNNs; the 2017 [Transformer paper](/attention-is-all-you-need) removed the RNN entirely and kept only attention.
+
+## Where To Go Next
+
+- Read [Sequence to Sequence](/seq2seq) for the bottlenecked architecture this paper improved
+- Read [Understanding LSTMs](/understanding-lstms) for the RNN machinery used underneath
+- Read [Transformer](/transformer) for the architecture built purely from attention
+- Read [Attention Is All You Need](/attention-is-all-you-need) for the paper that took that final step

@@ -19,34 +19,46 @@ resources:
 
 import { NTMViz } from '../../components/viz/NTMViz';
 
-**Neural Turing Machines** (NTMs) augment neural networks with external memory, allowing them to learn algorithms that require explicit storage and retrieval. They represent a step toward neural networks that can reason like computers.
+**Neural Turing Machines** (NTMs) bolt an external, readable-and-writable memory onto a neural network — like giving the network a notepad. Because every memory operation is differentiable, the whole system can learn *algorithms* (copy, sort, recall) end-to-end by gradient descent.
+
+> Helpful background: [Understanding LSTMs](/understanding-lstms) for the controller, and [Bahdanau Attention](/bahdanau-attention) for the attention idea the read/write heads are built on.
+
+## Why Students Should Care
+
+- NTMs are a landmark attempt to make neural networks compute more like computers — with explicit storage, not just learned reflexes.
+- They pioneered **differentiable attention over memory**, an idea that echoes through Memory Networks, DNCs, and [Transformer](/transformer) attention.
+- The core trick — replace a discrete choice ("read slot 7") with a soft, differentiable weighting over all choices — is one of the most reusable ideas in deep learning.
 
 ## Motivation
 
-Standard neural networks have limited memory capacity—stored implicitly in weights and activations. Computers, by contrast, have explicit addressable memory. NTMs bridge this gap.
+Think about how you multiply two long numbers by hand: you write down intermediate results and read them back later. A standard neural network cannot do this — its "memory" lives implicitly in weights and hidden activations, with no way to deliberately store a value and retrieve it later.
+
+Computers, by contrast, have explicit addressable memory. NTMs bridge this gap.
+
+The catch is that ordinary memory access is discrete ("read address 7"), and discrete choices block gradients. NTMs solve this by making every access *soft*: instead of reading one slot, read a weighted blend of all slots, with learnable weights.
 
 ## Architecture
 
 An NTM consists of:
 
-1. **Controller**: Neural network (LSTM or feedforward)
-2. **Memory Bank**: $N \times M$ matrix of memory locations
+1. **Controller**: Neural network (LSTM or feedforward) — the "CPU" that decides what to read and write
+2. **Memory Bank**: $N \times M$ matrix of memory locations — $N$ slots, each holding a vector of size $M$
 3. **Read Head**: Retrieves information from memory
 4. **Write Head**: Modifies memory contents
 
 ## Reading from Memory
 
-The read head produces attention weights $w_t$ over memory locations:
+The read head produces attention weights $w_t$ over memory locations, and the read result is a weighted average:
 
 $$
 r_t = \sum_{i=1}^{N} w_t(i) \cdot M_t(i)
 $$
 
-The read vector $r_t$ is a weighted sum of memory rows.
+The read vector $r_t$ is a weighted sum of memory rows. If the weights concentrate on one slot, this behaves like a normal memory read; because the weights are soft, gradients flow through the operation.
 
 ## Writing to Memory
 
-Writing combines **erase** and **add** operations:
+Writing combines **erase** and **add** operations — first partially blank a slot, then add new content:
 
 $$
 \tilde{M}_t(i) = M_{t-1}(i) \cdot [1 - w_t(i) \cdot e_t]
@@ -55,55 +67,79 @@ $$
 M_t(i) = \tilde{M}_t(i) + w_t(i) \cdot a_t
 $$
 
-The erase vector $e_t$ clears, the add vector $a_t$ writes new content.
+The erase vector $e_t$ clears, the add vector $a_t$ writes new content. Both are scaled by the attention weight $w_t(i)$, so the head mostly modifies the slots it is "looking at."
+
+The takeaway: **reads and writes are both just attention-weighted arithmetic**, which is why the whole machine trains with backpropagation.
 
 ## Addressing Mechanisms
 
-NTMs use a sophisticated attention mechanism with four stages:
+How does the head decide *where* to look? NTMs compute the attention weights in four stages, combining two styles of addressing: **content-based** ("find the slot that looks like this") and **location-based** ("move one slot to the right of where I was").
 
 ### 1. Content Addressing
 
-Compare a key vector $k_t$ to memory rows using cosine similarity:
+Compare a key vector $k_t$ to memory rows using cosine similarity, then softmax:
 
 $$
 w_t^c(i) = \frac{\exp(\beta_t \cdot K(k_t, M_t(i)))}{\sum_j \exp(\beta_t \cdot K(k_t, M_t(j)))}
 $$
 
+This is "search by similarity" — like looking up a memory by what it contains.
+
 ### 2. Interpolation
 
-Blend content-based weights with previous weights:
+Blend content-based weights with the previous step's weights:
 
 $$
 w_t^g = g_t \cdot w_t^c + (1 - g_t) \cdot w_{t-1}
 $$
 
+The gate $g_t$ lets the head either jump to new content or stay where it was.
+
 ### 3. Convolutional Shift
 
-Allow location-based addressing via circular convolution.
+Allow location-based addressing via circular convolution — the head can shift its focus left or right by a slot, enabling sequential iteration like a tape head.
 
 ### 4. Sharpening
 
-Focus attention with a sharpening parameter $\gamma_t$.
+Focus attention with a sharpening parameter $\gamma_t$, counteracting the blurring that shifting introduces.
 
 ## Interactive Demo
 
 Explore memory read/write operations:
 
-<NTMViz client:load />
+<NTMViz client:visible />
 
 ## What NTMs Can Learn
 
-The paper demonstrated learning of:
+The paper demonstrated learning of small algorithms from input-output examples alone:
+
 - **Copy**: Reproduce an input sequence
 - **Associative Recall**: Retrieve values by key
 - **N-Gram modeling**: Track recent symbols
 - **Priority Sort**: Sort by priority values
 
+Notably, NTMs generalized to longer sequences than they were trained on — evidence they learned something algorithm-like, not just pattern matching.
+
 ## Legacy
 
 NTMs pioneered ideas now central to modern AI:
+
 - External memory augmentation
 - Differentiable attention mechanisms
 - Content-based retrieval
 
 These concepts evolved into Memory Networks, Differentiable Neural Computers (DNC), and influenced Transformer attention.
+
+## Common Confusion
+
+- **NTM vs. Turing machine**: an NTM is not a formal Turing machine. The name signals the analogy — controller as CPU, memory bank as tape — but everything is continuous and learned.
+- **NTM vs. LSTM**: an LSTM's memory is a fixed-size hidden state entangled with computation; an NTM separates computation (controller) from storage (memory bank), which can be made larger without adding parameters.
+- **NTM attention vs. Transformer attention**: both use content-based, softmax-weighted lookup. But NTMs attend over an explicit *memory the model writes to*, while [Transformers](/transformer) attend over the input sequence's own representations, with no separate writable store.
+- **NTM vs. DNC**: the Differentiable Neural Computer is the successor architecture by the same group, with improved memory management (e.g., tracking which slots are free).
+
+## Where To Go Next
+
+- Read [Understanding LSTMs](/understanding-lstms) for the recurrent controller at an NTM's core.
+- Read [Bahdanau Attention](/bahdanau-attention) for the contemporaneous attention mechanism in translation.
+- Read [Transformer](/transformer) and [Attention Is All You Need](/attention-is-all-you-need) to see where differentiable attention ended up.
+- Read [Relational RNN](/relational-rnn) for a later memory-plus-attention architecture.

@@ -27,17 +27,25 @@ resources:
 
 import { BatchNormViz } from '../../components/viz/BatchNormViz';
 
-**Batch Normalization** (BatchNorm), introduced by Ioffe and Szegedy in 2015, is one of the most important techniques in deep learning. It normalizes layer inputs during training, enabling faster convergence, higher learning rates, and more stable training of deep networks.
+**Batch Normalization** (BatchNorm), introduced by Ioffe and Szegedy in 2015, is one of the most important techniques in deep learning. The idea: before passing a layer's outputs onward, rescale them so each feature has roughly zero mean and unit variance across the current mini-batch. This small change enables faster convergence, higher learning rates, and more stable training of deep networks.
 
-## The Problem: Internal Covariate Shift
+> This page covers normalization across the **batch**. Its sibling, [Layer Normalization](/layer-normalization), normalizes across the features of a single example and is the default in Transformers. Reading both makes the contrast click.
 
-As training progresses, the distribution of each layer's inputs changes because the preceding layers' weights change. This is called **internal covariate shift**.
+## Why Students Should Care
+
+- BatchNorm (or a variant of it) appears in nearly every modern architecture; it helped make very deep networks like [ResNet](/resnet) trainable.
+- It is a classic example of a simple idea with a huge practical payoff — and a debated explanation for why it works.
+- The train-vs-inference distinction in BatchNorm is a common source of real-world bugs (`model.eval()` exists largely because of it).
+
+## The Problem: Shifting Inputs
+
+Picture layer 5 of a deep network. Its input is the output of layers 1 through 4 — and those layers' weights change with every training step. So layer 5's input distribution keeps drifting: the "ground moves under its feet" while it tries to learn. The original paper named this **internal covariate shift**.
 
 Networks must constantly adapt to new input distributions, slowing training.
 
 ## The Solution: Normalize Each Mini-Batch
 
-For each feature in a layer, normalize across the mini-batch:
+BatchNorm's fix: standardize each feature using the statistics of the current mini-batch. For each feature in a layer:
 
 $$
 \hat{x}_i = \frac{x_i - \mu_B}{\sqrt{\sigma_B^2 + \epsilon}}
@@ -48,21 +56,23 @@ where:
 - $\sigma_B^2 = \frac{1}{m}\sum_{i=1}^m (x_i - \mu_B)^2$ (batch variance)
 - $\epsilon$ is a small constant for numerical stability
 
+This is the familiar "subtract the mean, divide by the standard deviation" from statistics — applied per feature, per mini-batch, inside the network.
+
 ## Learnable Parameters
 
-Simply normalizing would limit what the layer can represent. BatchNorm adds learnable scale ($\gamma$) and shift ($\beta$):
+Forcing every feature to have zero mean and unit variance would limit what the layer can represent. So BatchNorm adds a learnable scale ($\gamma$) and shift ($\beta$):
 
 $$
 y_i = \gamma \hat{x}_i + \beta
 $$
 
-This allows the network to learn to undo normalization if needed.
+The takeaway: **the network normalizes first, then learns whatever scale and offset it actually wants** — including undoing the normalization entirely if that helps.
 
 ## Interactive Demo
 
 Visualize how BatchNorm stabilizes activations during training:
 
-<BatchNormViz client:load />
+<BatchNormViz client:visible />
 
 ## Where to Apply BatchNorm
 
@@ -75,6 +85,8 @@ Typically applied after the linear transformation but before the activation func
 
 ## Training vs. Inference
 
+Here is the subtle part. At inference time you might process a single example — there is no batch to compute statistics from. So BatchNorm behaves differently in the two modes:
+
 **During training**: Use mini-batch statistics ($\mu_B$, $\sigma_B^2$)
 
 **During inference**: Use running averages computed during training:
@@ -83,7 +95,7 @@ $$
 \mu_{running} = \alpha \cdot \mu_{running} + (1-\alpha) \cdot \mu_B
 $$
 
-This ensures deterministic outputs at inference time.
+This ensures deterministic outputs at inference time. Forgetting to switch modes (in PyTorch, `model.eval()`) is a classic bug.
 
 ## Why It Works
 
@@ -92,6 +104,8 @@ The original paper attributed success to reducing internal covariate shift, but 
 1. **Smoother loss landscape**: BatchNorm makes the optimization surface smoother, allowing larger learning rates
 2. **Gradient flow**: Normalization prevents gradients from vanishing or exploding
 3. **Regularization**: Mini-batch noise acts as a regularizer
+
+The honest summary: BatchNorm clearly helps, and the *why* is still partly an open research question.
 
 ## Benefits
 
@@ -104,6 +118,8 @@ The original paper attributed success to reducing internal covariate shift, but 
 
 ## BatchNorm Variants
 
+The family differs mainly in *which dimension* gets normalized:
+
 | Variant | Normalization Dimension | Use Case |
 |---------|------------------------|----------|
 | **BatchNorm** | Across batch | CNNs (requires large batches) |
@@ -112,6 +128,8 @@ The original paper attributed success to reducing internal covariate shift, but 
 | **GroupNorm** | Groups of channels | Small batch sizes |
 
 ## The Forward Pass
+
+The core computation is only a few lines:
 
 ```python
 def batch_norm(x, gamma, beta, eps=1e-5):
@@ -130,11 +148,11 @@ def batch_norm(x, gamma, beta, eps=1e-5):
 2. **Not suited for RNNs**: Variable sequence lengths complicate batch statistics
 3. **Train/test discrepancy**: Different behavior in train vs. inference modes
 
-For transformers and RNNs, **Layer Normalization** is preferred.
+For transformers and RNNs, [Layer Normalization](/layer-normalization) is preferred.
 
 ## The Math: Backward Pass
 
-Gradients flow through normalization:
+BatchNorm is differentiable, so gradients flow through the normalization during [backpropagation](/backpropagation). The gradients for the learnable parameters are simple:
 
 $$
 \frac{\partial L}{\partial \gamma} = \sum_i \frac{\partial L}{\partial y_i} \cdot \hat{x}_i
@@ -144,7 +162,7 @@ $$
 \frac{\partial L}{\partial \beta} = \sum_i \frac{\partial L}{\partial y_i}
 $$
 
-The gradient through $\hat{x}$ involves the chain rule through mean and variance.
+The gradient through $\hat{x}$ involves the chain rule through the mean and variance — messier, but your framework handles it automatically.
 
 ## Historical Impact
 
@@ -153,3 +171,17 @@ BatchNorm enabled:
 - Higher learning rates (faster experimentation)
 - Reduced hyperparameter sensitivity
 - Standard component in nearly all modern architectures
+
+## Common Confusion
+
+- **BatchNorm vs. LayerNorm**: BatchNorm normalizes each feature *across examples in the batch*; LayerNorm normalizes *across the features of one example*. This is the single most important distinction to remember.
+- **BatchNorm is not just preprocessing.** Input standardization happens once to the data; BatchNorm happens inside the network, at every normalized layer, on every step, with learnable parameters.
+- **Training and inference behave differently.** BatchNorm is one of the few layers where the same input can produce different outputs depending on the mode.
+- **"Internal covariate shift" is the historical motivation, not the settled explanation** — later work (Santurkar et al., 2018) argues the benefit comes mainly from a smoother loss landscape.
+
+## Where To Go Next
+
+- Read [Layer Normalization](/layer-normalization) for the batch-independent variant used in Transformers.
+- Read [ResNet](/resnet) for the architecture whose extreme depth BatchNorm helped make trainable.
+- Read [Dropout](/dropout) for the other classic regularizer, and how the two interact.
+- Read [Backpropagation](/backpropagation) if the backward-pass section felt too fast.

@@ -33,11 +33,23 @@ import { DiffusionViz } from '../../components/viz/DiffusionViz';
 
 **Diffusion Models** generate data by learning to reverse a gradual noising process. Starting from pure noise, they iteratively denoise to produce remarkably high-quality images, videos, and audio.
 
+> Helpful background: [VAE](/vae) and [GAN](/gan) show the earlier approaches to generation. This page covers diffusion in pixel space; [Latent Diffusion](/latent-diffusion) covers the efficiency trick behind Stable Diffusion.
+
+## Why Students Should Care
+
+- Diffusion is the engine behind modern image and video generators — Stable Diffusion, DALL-E 2, and Imagen are all diffusion models.
+- The training objective is astonishingly simple (a mean-squared error on noise), which is why diffusion trains stably where [GANs](/gan) struggle.
+- The same "destroy data, learn to rebuild it" recipe generalizes beyond images to audio, video, and molecules.
+
+## The Idea in One Paragraph
+
+Take a photo and add a tiny amount of static. Add a little more. Repeat a thousand times and you end up with pure noise — the image is destroyed. Each single step of that destruction is easy to describe. The diffusion insight: train a network to *undo one small step* of noising. If it can do that at every noise level, you can start from pure random noise and denoise step by step until an image appears — generating data from nothing.
+
 ## Core Idea
 
 The process has two phases:
 
-**Forward process** (fixed): Gradually add Gaussian noise to data over $T$ steps:
+**Forward process** (fixed, no learning): Gradually add Gaussian noise to data over $T$ steps:
 
 $$
 q(x_t | x_{t-1}) = \mathcal{N}(x_t; \sqrt{1-\beta_t} x_{t-1}, \beta_t I)
@@ -49,9 +61,11 @@ $$
 p_\theta(x_{t-1} | x_t) = \mathcal{N}(x_{t-1}; \mu_\theta(x_t, t), \Sigma_\theta(x_t, t))
 $$
 
+The takeaway: the forward direction is a fixed recipe for corrupting data; only the reverse direction — the denoiser — has parameters to train.
+
 ## The Closed-Form Forward Process
 
-We can jump directly to any timestep $t$:
+A convenient property: you never have to noise an image step by step during training. We can jump directly to any timestep $t$:
 
 $$
 q(x_t | x_0) = \mathcal{N}(x_t; \sqrt{\bar{\alpha}_t} x_0, (1-\bar{\alpha}_t) I)
@@ -61,19 +75,21 @@ where $\bar{\alpha}_t = \prod_{s=1}^{t} (1-\beta_s)$.
 
 This means: $x_t = \sqrt{\bar{\alpha}_t} x_0 + \sqrt{1-\bar{\alpha}_t} \epsilon$, where $\epsilon \sim \mathcal{N}(0, I)$.
 
+In plain English: an image at noise level $t$ is just a weighted blend of the clean image and one fresh draw of Gaussian noise. That makes training samples cheap to produce.
+
 ## Training Objective
 
-Instead of predicting $\mu_\theta$, predict the noise $\epsilon$:
+Instead of predicting the denoised mean $\mu_\theta$ directly, it works better to predict the noise $\epsilon$ that was added:
 
 $$
 \mathcal{L}_{\text{simple}} = \mathbb{E}_{t, x_0, \epsilon}\left[ \| \epsilon - \epsilon_\theta(x_t, t) \|^2 \right]
 $$
 
-Sample $t$ uniformly, noise the image, predict the noise. Remarkably simple yet effective.
+The whole training loop is: sample a random timestep $t$, noise the image, ask the network "what noise did I add?", and penalize the squared error. Remarkably simple yet effective — no adversarial game, no delicate balance, just regression.
 
 ## Sampling (Inference)
 
-Start with $x_T \sim \mathcal{N}(0, I)$, then iterate:
+To generate, start with pure noise $x_T \sim \mathcal{N}(0, I)$, then repeatedly take one denoising step:
 
 $$
 x_{t-1} = \frac{1}{\sqrt{\alpha_t}}\left(x_t - \frac{\beta_t}{\sqrt{1-\bar{\alpha}_t}} \epsilon_\theta(x_t, t)\right) + \sigma_t z
@@ -81,28 +97,30 @@ $$
 
 where $z \sim \mathcal{N}(0, I)$ and $\sigma_t$ controls stochasticity.
 
+You do not need to memorize this formula. The important idea is: **each step subtracts the network's noise estimate (scaled appropriately) and optionally re-injects a little fresh randomness**, gradually turning noise into data.
+
 ## Classifier-Free Guidance
 
-To improve sample quality, interpolate between conditional and unconditional predictions:
+How does a text prompt steer generation? Train the model both with and without conditioning, then at sampling time interpolate between the two predictions:
 
 $$
 \tilde{\epsilon}_\theta(x_t, t, c) = \epsilon_\theta(x_t, t, \emptyset) + w \cdot (\epsilon_\theta(x_t, t, c) - \epsilon_\theta(x_t, t, \emptyset))
 $$
 
-where $w > 1$ strengthens conditioning (e.g., on text prompts).
+where $w > 1$ strengthens conditioning (e.g., on text prompts). Intuitively: figure out which direction the prompt pulls the denoising, then exaggerate that direction. This is the "guidance scale" knob in image generators.
 
 ## Interactive Visualization
 
-Watch the diffusion process in action—forward noising and reverse denoising:
+Watch the diffusion process in action — forward noising and reverse denoising:
 
-<DiffusionViz client:load />
+<DiffusionViz client:visible />
 
 ## Architecture: U-Net
 
 The denoising network is typically a U-Net with:
-- **Time embedding**: Sinusoidal encoding of $t$
-- **Attention layers**: Self-attention and cross-attention (for conditioning)
-- **Skip connections**: Preserve spatial information
+- **Time embedding**: Sinusoidal encoding of $t$, so one network can handle every noise level
+- **Attention layers**: Self-attention and cross-attention (for conditioning on text or labels)
+- **Skip connections**: Preserve spatial information between the downsampling and upsampling paths
 
 ## Key Models
 
@@ -121,3 +139,17 @@ Unlike GANs (adversarial, unstable) or VAEs (blurry), diffusion models:
 2. Produce high-fidelity samples
 3. Enable controllable generation
 4. Scale effectively with compute
+
+## Common Confusion
+
+- **The forward process is not learned.** Only the reverse (denoising) network has trainable parameters; the noising schedule is fixed in advance.
+- **The network predicts the *noise*, not the finished image** — the clean image emerges only after many denoising steps.
+- **Diffusion vs. latent diffusion**: this page describes diffusion directly on pixels; [latent diffusion](/latent-diffusion) first compresses images with a [VAE](/vae) and diffuses in that smaller space.
+- **Training steps vs. sampling steps**: training picks one random timestep per example, but generation walks through many steps — which is why samplers like DDIM that cut the step count matter so much in practice.
+
+## Where To Go Next
+
+- Read [Latent Diffusion](/latent-diffusion) to see how Stable Diffusion makes this process affordable.
+- Read [VAE](/vae) and [GAN](/gan) for the generative models diffusion is usually compared against.
+- Read [CLIP](/clip) to understand the text encoders used for conditioning and guidance.
+- Read [Attention Is All You Need](/attention-is-all-you-need) for the attention layers inside the U-Net.

@@ -35,27 +35,43 @@ resources:
 
 import { GPTViz } from '../../components/viz/GPTViz';
 
-**GPT** (Generative Pre-trained Transformer) introduced the paradigm of large-scale autoregressive language modeling. Starting with GPT-1 (2018) from OpenAI, the series demonstrated that scaling transformer decoders creates increasingly capable general-purpose models.
+**GPT** (Generative Pre-trained Transformer) is a family of language models built on one deceptively simple task: predict the next token. Starting with GPT-1 (2018) from OpenAI, the series demonstrated that scaling Transformer decoders creates increasingly capable general-purpose models.
+
+> If this page feels too fast, read [Transformer](/transformer) first. GPT is a **decoder-only** Transformer trained for generation; its sibling [BERT](/bert) is an **encoder-only** Transformer trained for understanding.
+
+## Why Students Should Care
+
+- GPT is the direct ancestor of ChatGPT, Claude, and most modern LLMs — they are all decoder-only next-token predictors.
+- The GPT series is the clearest demonstration of the **scaling hypothesis**: same recipe, more parameters and data, qualitatively new abilities.
+- Ideas you will meet everywhere — prompting, few-shot learning, foundation models — were established by these papers.
+
+## A Quick Example
+
+Read this and predict the next word:
+
+`The capital of France is`
+
+You said "Paris." To do that reliably across billions of sentences, a model has to absorb grammar, facts, and even reasoning patterns. That is the whole training signal: guess the next token, get corrected, repeat.
 
 ## Core Idea: Next Token Prediction
 
-GPT models learn to predict the next token given all previous tokens:
+Formally, GPT models the probability of a sequence as a chain of next-token predictions:
 
 $$
 P(x_1, x_2, ..., x_n) = \prod_{i=1}^{n} P(x_i | x_1, ..., x_{i-1})
 $$
 
-This simple objective—predicting what comes next—turns out to encode rich understanding of language, facts, and reasoning.
+You do not need to memorize the equation. The important idea is: **each token is predicted from everything before it, and nothing after it**. This simple objective — predicting what comes next — turns out to encode rich understanding of language, facts, and reasoning.
 
 ## The Architecture
 
-GPT uses the **Transformer decoder** with causal (masked) self-attention:
+GPT uses the **Transformer decoder** with causal (masked) self-attention. "Causal" means each token can only attend to earlier tokens — the future is hidden:
 
 $$
 \text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}} + M\right)V
 $$
 
-where $M$ is a causal mask preventing attention to future tokens.
+where $M$ is a causal mask preventing attention to future tokens. Without the mask, predicting the next token would be trivial cheating — the answer would be visible.
 
 | Model | Year | Parameters | Context | Training Data |
 |-------|------|------------|---------|---------------|
@@ -70,22 +86,22 @@ where $M$ is a causal mask preventing attention to future tokens.
 
 Explore autoregressive generation and causal attention:
 
-<GPTViz client:load />
+<GPTViz client:visible />
 
 ## GPT-2: The Scaling Revelation
 
-GPT-2 demonstrated **emergent capabilities** from scale:
+GPT-2 demonstrated **emergent capabilities** from scale — abilities nobody explicitly trained for:
 
 - Zero-shot task performance without fine-tuning
 - Coherent long-form text generation
 - Basic reasoning and arithmetic
 - Translation and summarization (without training for it)
 
-The paper's key insight: "Language models are unsupervised multitask learners."
+The paper's key insight: "Language models are unsupervised multitask learners." Learning to predict text well means implicitly learning the tasks that text describes.
 
 ## GPT-3: In-Context Learning
 
-GPT-3 introduced **few-shot prompting**:
+GPT-3 introduced **few-shot prompting**: show the model a couple of examples inside the prompt, and it picks up the pattern.
 
 ```
 Translate English to French:
@@ -94,24 +110,25 @@ peppermint => menthe poivrée
 cheese =>
 ```
 
-The model learns new tasks from examples in the prompt, without gradient updates. This emerged purely from scale.
+The model learns new tasks from examples in the prompt, **without any gradient updates** — its weights never change. This emerged purely from scale. See [In-Context Learning](/in-context-learning) for more.
 
 ## Training Objective
 
-Standard language modeling loss:
+Training minimizes the standard language modeling loss — how surprised the model is by each true next token:
 
 $$
 \mathcal{L} = -\sum_{i=1}^{n} \log P(x_i | x_1, ..., x_{i-1}; \theta)
 $$
 
 GPT-3 additionally uses:
+
 - Sparse attention patterns for efficiency
 - Model parallelism across many GPUs
 - Careful data deduplication
 
 ## Why Decoder-Only?
 
-BERT uses encoders (bidirectional), GPT uses decoders (causal). Why?
+BERT uses encoders (bidirectional), GPT uses decoders (causal). Why choose one or the other?
 
 | Aspect | Encoder (BERT) | Decoder (GPT) |
 |--------|---------------|---------------|
@@ -124,27 +141,43 @@ Modern LLMs (GPT-4, Claude) use decoder-only architectures because generation is
 
 ## Scaling Laws
 
-GPT-3 revealed predictable scaling:
+GPT-3 revealed that performance improves **predictably** with size:
 
 $$
 L(N) \approx \left(\frac{N_c}{N}\right)^{\alpha_N}
 $$
 
-Loss decreases as a power law with model size $N$, data size $D$, and compute $C$.
+Loss decreases as a power law with model size $N$, data size $D$, and compute $C$. The takeaway: you can forecast how good a bigger model will be before you train it. See [Scaling Laws](/scaling-laws) for the full story.
 
 ## From GPT to ChatGPT
 
-The path to conversational AI:
-1. **GPT-3**: Raw language model
-2. **InstructGPT**: Fine-tuned to follow instructions (RLHF)
-3. **ChatGPT**: Optimized for dialogue
+A raw language model completes text; it does not naturally follow instructions. The path to conversational AI:
 
-RLHF (Reinforcement Learning from Human Feedback) aligns the model with human preferences.
+1. **GPT-3**: raw language model
+2. **InstructGPT**: fine-tuned to follow instructions (RLHF)
+3. **ChatGPT**: optimized for dialogue
+
+RLHF (Reinforcement Learning from Human Feedback) aligns the model with human preferences — see [RLHF](/rlhf).
 
 ## Historical Impact
 
 GPT established:
-- **Scaling hypothesis**: Bigger models → better capabilities
-- **Emergent abilities**: Capabilities appearing at scale
-- **Prompt engineering**: Programming via natural language
-- **Foundation models**: One model, many tasks
+
+- **Scaling hypothesis**: bigger models → better capabilities
+- **Emergent abilities**: capabilities appearing at scale
+- **Prompt engineering**: programming via natural language
+- **Foundation models**: one model, many tasks
+
+## Common Confusion
+
+- **GPT is the model family; ChatGPT is a product** built on GPT models plus instruction tuning and RLHF.
+- **Decoder-only does not mean worse at understanding.** GPT models understand text too — they just build that understanding from left context only.
+- **In-context learning is not fine-tuning.** Few-shot prompting changes no weights; fine-tuning does.
+
+## Where To Go Next
+
+- Read [Transformer](/transformer) for the underlying architecture
+- Read [BERT](/bert) for the encoder-only alternative
+- Read [Scaling Laws](/scaling-laws) for why bigger keeps getting better
+- Read [In-Context Learning](/in-context-learning) for how prompting works as learning
+- Read [RLHF](/rlhf) for how raw GPT became a helpful assistant

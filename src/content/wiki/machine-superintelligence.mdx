@@ -15,52 +15,68 @@ resources:
 
 import { AISuperIntelligenceViz } from '../../components/viz/AISuperIntelligenceViz';
 
-**Machine Super Intelligence** is Shane Legg's PhD thesis that provides a rigorous mathematical definition of intelligence and proves that the AIXI agent is optimally intelligent.
+**Machine Super Intelligence** is Shane Legg's 2008 PhD thesis. It tackles a deceptively simple question — *what is intelligence, mathematically?* — and answers it with a formal definition, plus a proof that a hypothetical agent called **AIXI** is as intelligent as any agent can be.
+
+> This page leans on two ideas worth meeting first: [Kolmogorov Complexity](/kolmogorov-complexity) (how "simple" a thing is, measured by the shortest program that produces it) and [Reinforcement Learning](/reinforcement-learning) (agents acting in environments to maximize reward).
+
+## Why Students Should Care
+
+- This is the closest thing AI theory has to a *definition* of intelligence — not a vibe, an equation.
+- Legg went on to co-found DeepMind; these ideas shaped how a generation of researchers thinks about AGI.
+- The thesis connects compression, prediction, and intelligence — the same connection that helps explain why language models trained to predict text end up looking smart.
+
+## The Question, In Plain English
+
+Before the math: Legg's proposal is that an agent is intelligent if it **performs well across many different environments**, with a twist — simple environments count more than convoluted ones. A chess engine that only plays chess is narrow; an agent that racks up reward in *any* world you drop it into is intelligent.
 
 ## Defining Intelligence
 
-Legg proposes a formal definition:
+Formally:
 
 $$
 \Upsilon(\pi) = \sum_{\mu \in E} 2^{-K(\mu)} V_\mu^\pi
 $$
 
 where:
+
 - $\pi$ is an agent (policy)
 - $\mu$ is an environment
-- $K(\mu)$ is Kolmogorov complexity of $\mu$
+- $K(\mu)$ is the Kolmogorov complexity of $\mu$
 - $V_\mu^\pi$ is the expected reward of $\pi$ in $\mu$
 
-Intelligence is average performance across *all computable environments*, weighted by simplicity.
+You do not need to memorize the formula. It says: **intelligence is average performance across all computable environments, where simpler environments get exponentially more weight.** The weighting $2^{-K(\mu)}$ is a mathematical version of Occam's razor.
 
 ## The AIXI Agent
 
-AIXI is the theoretically optimal agent:
+Given that definition, is there a *best possible* agent? Yes — AIXI:
 
 $$
 a^*_t = \arg\max_{a_t} \sum_{o_t r_t} \sum_{\mu \in E} 2^{-K(\mu)} \mu(o_t r_t | a_t h_{<t})
 $$
 
 At each step, AIXI:
+
 1. Considers all possible environments (weighted by complexity)
 2. Computes expected reward for each action
 3. Chooses the action maximizing expected future reward
+
+In plain English: AIXI hedges across every theory of how the world might work, favors the simple theories, and picks whatever action does best on average.
 
 ## Interactive Demo
 
 Explore the key concepts from the thesis:
 
-<AISuperIntelligenceViz client:load />
+<AISuperIntelligenceViz client:visible />
 
 ## Solomonoff Induction
 
-The prediction component of AIXI uses Solomonoff's universal prior:
+How does AIXI predict what happens next? It uses Solomonoff's universal prior:
 
 $$
 P(x) = \sum_{p: U(p) = x*} 2^{-|p|}
 $$
 
-The probability of observing $x$ is the sum over all programs that output $x$, weighted by their brevity.
+The probability of observing $x$ is the sum over all programs that output $x$, weighted by their brevity. Short programs dominate — again, Occam's razor made precise. If many short programs produce your observations so far, their shared predictions get high probability.
 
 ## Key Results
 
@@ -72,9 +88,9 @@ $$
 
 No other agent achieves higher expected performance across all environments.
 
-**Theorem (Incomputability)**: AIXI cannot be computed:
+**Theorem (Incomputability)**: AIXI cannot be computed.
 
-The universal prior requires solving the halting problem. Real systems must approximate.
+The universal prior requires solving the halting problem, so no real machine can run AIXI. Real systems must approximate. This pair of results is the punchline of the thesis: *perfect* intelligence exists on paper and is provably out of reach in practice.
 
 ## The Compression-Intelligence Connection
 
@@ -84,14 +100,15 @@ $$
 K(x_{1:n}) \approx -\log P(x_{1:n})
 $$
 
-A good predictor is a good compressor, and vice versa. This connects AIXI to practical language models.
+A good predictor is a good compressor, and vice versa: if you can predict the next symbol well, you can encode data in few bits, and a short description of data is exactly what a good predictor exploits. This connects AIXI to practical language models, which are trained purely to predict. See [Kolmogorov Complexity](/kolmogorov-complexity) and the [MDL Tutorial](/mdl-tutorial) for more on this thread.
 
 ## Practical Approximations
 
 Real AI systems approximate AIXI through:
-- **Bounded computation**: Limited search depth
-- **Finite environments**: Specific domain knowledge
-- **Learned priors**: Neural networks instead of Solomonoff
+
+- **Bounded computation**: limited search depth
+- **Finite environments**: specific domain knowledge
+- **Learned priors**: neural networks instead of Solomonoff
 
 Modern LLMs can be viewed as crude AIXI approximations trained on text.
 
@@ -101,3 +118,16 @@ Modern LLMs can be viewed as crude AIXI approximations trained on text.
 - Optimal intelligence requires universal prediction
 - Real AI must make tractability/optimality tradeoffs
 - Scaling leads toward AIXI-like behavior
+
+## Common Confusion
+
+- **AIXI vs. AGI**: AIXI is a mathematical ideal, not a buildable system. It defines the ceiling, not a blueprint.
+- **"Optimal" does not mean "achievable"**: the thesis proves AIXI is best *and* that it is incomputable. Both theorems matter; quoting only the first is misleading.
+- **Kolmogorov complexity vs. ordinary complexity**: $K(\mu)$ is the length of the shortest program describing $\mu$ — a precise quantity (itself uncomputable), not an informal notion of "complicated."
+
+## Where To Go Next
+
+- Read [Kolmogorov Complexity](/kolmogorov-complexity) for the simplicity measure at the heart of the definition.
+- Read [Reinforcement Learning](/reinforcement-learning) for the agent-environment-reward framing AIXI lives in.
+- Read the [MDL Tutorial](/mdl-tutorial) for the compression-as-learning idea in a practical setting.
+- Read [Scaling Laws](/scaling-laws) to see how "better prediction with more compute" plays out in real models.

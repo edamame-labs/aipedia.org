@@ -23,17 +23,25 @@ resources:
 
 import { AnnotatedTransformerViz } from '../../components/viz/AnnotatedTransformerViz';
 
-**The Annotated Transformer** is a line-by-line guide to implementing the Transformer architecture in PyTorch. Created by Harvard NLP, it makes the seminal "Attention Is All You Need" paper concrete and reproducible.
+**The Annotated Transformer** is a line-by-line guide to implementing the Transformer architecture in PyTorch. Created by Harvard NLP, it makes the seminal "Attention Is All You Need" paper concrete and reproducible: every equation in the paper is paired with the few lines of code that compute it.
+
+> This page is about a **tutorial implementation**, not a new model. If you have not met the architecture yet, read [Transformer](/transformer) first; for the paper itself, see [Attention Is All You Need](/attention-is-all-you-need).
+
+## Why Students Should Care
+
+- Reading a paper and *implementing* it are very different skills — this resource bridges the two.
+- The full working Transformer fits in roughly 400 lines of PyTorch. Seeing that demystifies the architecture behind modern LLMs.
+- The habits it teaches (map each equation to a small module, test pieces independently) transfer to implementing any paper.
 
 ## Why Code Matters
 
-The original Transformer paper describes the architecture mathematically. The Annotated Transformer shows exactly how those equations become working code:
+The original Transformer paper describes the architecture mathematically. The Annotated Transformer shows exactly how those equations become working code. For example, the attention equation
 
 $$
 \text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V
 $$
 
-becomes:
+becomes just three lines:
 
 ```python
 scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k)
@@ -41,26 +49,32 @@ p_attn = scores.softmax(dim=-1)
 return torch.matmul(p_attn, value)
 ```
 
+If the math felt abstract, the code makes it concrete: a matrix multiply to compare queries with keys, a softmax to turn scores into weights, and another matrix multiply to mix the values.
+
 ## Core Components
 
 The full Transformer in ~400 lines breaks down into six key pieces:
 
-1. **Embeddings + Positional Encoding** — Token lookup + position information
-2. **Multi-Head Attention** — Parallel attention heads
-3. **Feed-Forward Network** — Position-wise MLP
-4. **Encoder Layer** — Self-attention + FFN with residuals
-5. **Decoder Layer** — Masked self-attention + cross-attention + FFN
-6. **Generator** — Project to vocabulary for prediction
+1. **Embeddings + Positional Encoding** — token lookup + position information
+2. **Multi-Head Attention** — parallel attention heads
+3. **Feed-Forward Network** — position-wise MLP
+4. **Encoder Layer** — self-attention + FFN with residuals
+5. **Decoder Layer** — masked self-attention + cross-attention + FFN
+6. **Generator** — project to vocabulary for prediction
+
+Each piece is a small, independent module — none of them is individually complicated.
 
 ## Interactive Code Explorer
 
 Click through the architecture to see the implementation of each component:
 
-<AnnotatedTransformerViz client:load />
+<AnnotatedTransformerViz client:visible />
 
 ## Key Implementation Details
 
 ### Scaled Dot-Product Attention
+
+The complete attention function, including the mask used by the decoder to hide future tokens:
 
 ```python
 def attention(query, key, value, mask=None, dropout=None):
@@ -72,7 +86,11 @@ def attention(query, key, value, mask=None, dropout=None):
     return torch.matmul(p_attn, value), p_attn
 ```
 
+Note the trick: masked positions get a score of `-1e9`, so after the softmax their weight is effectively zero.
+
 ### Sublayer Connection (Residual + LayerNorm)
+
+Every attention and feed-forward block is wrapped in the same pattern — normalize, apply the sublayer, add the result back to the input:
 
 ```python
 class SublayerConnection(nn.Module):
@@ -80,12 +98,27 @@ class SublayerConnection(nn.Module):
         return x + self.dropout(sublayer(self.norm(x)))
 ```
 
+The residual `x +` is what lets gradients flow through many stacked layers.
+
 ## Learning Path
 
 The Annotated Transformer is best approached in order:
 
-1. **Embeddings** — How tokens become vectors
-2. **Attention** — The core mechanism
-3. **Multi-Head** — Parallel attention
-4. **Encoder/Decoder** — Full architecture
-5. **Training** — Label smoothing, optimizer
+1. **Embeddings** — how tokens become vectors
+2. **Attention** — the core mechanism
+3. **Multi-Head** — parallel attention
+4. **Encoder/Decoder** — full architecture
+5. **Training** — label smoothing, optimizer
+
+## Common Confusion
+
+- **The Annotated Transformer is a tutorial, not a model.** It introduces no new ideas — it faithfully implements the 2017 paper.
+- **Transformer vs. Attention Is All You Need vs. this page.** [Transformer](/transformer) is the architecture, [Attention Is All You Need](/attention-is-all-you-need) is the paper, and the Annotated Transformer is the walkthrough that turns the paper into code.
+- **~400 lines does not include training infrastructure.** Data loading, batching, and large-scale training are separate engineering concerns.
+
+## Where To Go Next
+
+- Read [Transformer](/transformer) for the conceptual overview of the architecture
+- Read [Attention Is All You Need](/attention-is-all-you-need) for the original paper and results
+- Read [Layer Normalization](/layer-normalization) for the normalization used in every sublayer
+- Read [BERT](/bert) and [GPT](/gpt) for what people built once the architecture was implementable

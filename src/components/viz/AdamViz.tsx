@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
+import '../../lib/motion';
 
 type Point = { x: number; y: number };
 type Optimizer = 'sgd' | 'momentum' | 'adam';

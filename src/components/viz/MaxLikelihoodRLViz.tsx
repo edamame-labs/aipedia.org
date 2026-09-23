@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import '../../lib/motion';
 
 /**
  * Visualizes the core MaxRL insight: the ML objective's Maclaurin expansion
