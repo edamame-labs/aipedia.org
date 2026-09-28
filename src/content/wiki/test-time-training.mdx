@@ -1,0 +1,98 @@
+---
+title: "Test-Time Training with Self-Supervision for Generalization under Distribution Shifts"
+description: "Adapting model parameters at test time using self-supervised learning on unlabeled test samples to handle distribution shifts"
+date: 2026-02-19
+tags: ["robustness", "self-supervised-learning", "deep-learning", "distribution-shift"]
+---
+
+**Test-Time Training (TTT)** is a method introduced by Sun et al. (2020) that adapts a model's parameters at test time using self-supervised learning on the unlabeled test sample itself. The key insight: even without labels, a single test input carries information about the distribution it came from, and the model can exploit this via a self-supervised objective before making its prediction.
+
+## The Problem
+
+Standard supervised learning assumes training and test data come from the same distribution. In practice, test data often differs — corrupted images, new environments, sensor drift. Existing approaches like domain adaptation require knowing the type of shift in advance. TTT makes no such assumption.
+
+## Core Idea
+
+The model is trained jointly on a main task (e.g., image classification) and a self-supervised auxiliary task (e.g., predicting image rotation). At test time, the self-supervised loss is used to update the model's shared feature extractor on each test sample before making a prediction.
+
+The unlabeled test sample $x$ gives a hint about its distribution. TTT exploits this hint by allowing model parameters $\theta$ to depend on $x$, without needing its unknown label $y$.
+
+## Architecture
+
+TTT uses a **Y-shaped architecture** with three components:
+
+- **Shared feature extractor** $\theta_e$ — the bottom of the Y
+- **Main task head** $\theta_m$ — one branch (e.g., image classifier)
+- **Self-supervised head** $\theta_s$ — the other branch (e.g., rotation predictor)
+
+The two branches share the feature extractor. This is critical: updating $\theta_e$ on the self-supervised loss at test time improves the features used by the main task.
+
+## Self-Supervised Task
+
+The paper uses **rotation prediction** as the auxiliary task. An input image is rotated by one of $\{0°, 90°, 180°, 270°\}$, and the model predicts the rotation angle as a four-way classification problem.
+
+This task is simple, requires no labels, and encourages features that capture object structure — features that transfer well to the main task.
+
+## Training Phase
+
+During training, both losses are jointly optimized in a multi-task fashion:
+
+$$
+\min_{\theta_e, \theta_m, \theta_s} \; \mathbb{E}_{(x,y) \sim P_{\text{train}}} \left[ \ell_m(\theta_m, \theta_e; x, y) + \lambda \, \ell_s(\theta_s, \theta_e; x) \right]
+$$
+
+where $\ell_m$ is the main task loss, $\ell_s$ is the self-supervised loss, and $\lambda$ balances the two.
+
+## Test-Time Adaptation
+
+When a test sample arrives:
+
+1. **Initialize** from the jointly trained parameters
+2. **Update** the shared feature extractor $\theta_e$ by minimizing the self-supervised loss on the test sample (typically ~10 gradient steps)
+3. **Predict** using the adapted parameters through the main task head
+4. **Reset** parameters for the next sample
+
+Multiple augmented versions of the test sample form a pseudo-batch for stable gradient computation. Group Normalization is used instead of Batch Normalization since TTT operates on single samples.
+
+## Online TTT
+
+If test samples arrive in a stream, TTT can keep parameter state across samples instead of resetting:
+
+$$
+\theta_e^{(t)} = \theta_e^{(t-1)} - \eta \nabla_{\theta_e} \ell_s(\theta_s, \theta_e^{(t-1)}; x_t)
+$$
+
+This **online** variant accumulates distributional knowledge across the stream and yields the strongest improvements — even outperforming unsupervised domain adaptation methods that have access to the entire unlabeled test set during training.
+
+## Why It Works: Gradient Correlation
+
+The authors provide a theoretical condition for when TTT helps: the gradients of the main task loss and the self-supervised loss on the shared features must be **correlated**. Intuitively, if solving the self-supervised task pushes the features in the same direction as solving the main task, then updating on the self-supervised loss at test time improves main-task performance.
+
+This is empirically confirmed — corruption types with stronger gradient correlation show larger gains from TTT.
+
+## Results
+
+On CIFAR-10-C (level 5 corruptions):
+
+- TTT improves over both the standard model and joint training without test-time adaptation
+- TTT-Online yields the strongest improvements, outperforming UDA-SS (unsupervised domain adaptation with self-supervision)
+- TTT maintains or slightly improves accuracy on unshifted data — it does not trade clean performance for robustness
+
+The approach generalizes across corruption types (noise, blur, weather, digital) and extends to ImageNet-C.
+
+## Legacy
+
+TTT introduced the paradigm of adapting model parameters at test time via self-supervised learning. It has influenced a broad line of follow-up work:
+
+- **TTT++** (Liu et al., 2021) — investigates when self-supervised TTT fails or thrives
+- **TTT-MAE** (Gandelsman et al., 2022) — uses masked autoencoders for test-time training
+- **TTT layers for sequence modeling** (Sun et al., 2024) — repurposes the TTT idea as an RNN hidden state update rule for linear-complexity language models
+
+## Key Papers
+
+- **Test-Time Training with Self-Supervision for Generalization under Distribution Shifts** — Sun et al., 2020
+  https://arxiv.org/abs/1909.13231
+- **Learning to (Learn at Test Time): RNNs with Expressive Hidden States** — Sun et al., 2024
+  https://arxiv.org/abs/2407.04620
+- **TTT++: When Does Self-Supervised Test-Time Training Fail or Thrive?** — Liu et al., 2021
+  https://proceedings.neurips.cc/paper/2021/file/b618c3210e934362ac261db280128c22-Paper.pdf
